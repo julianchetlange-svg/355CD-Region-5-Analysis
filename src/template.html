@@ -1,0 +1,807 @@
+<title>Region 5 Fleet Forecast 2027</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: brand header band, sticky tab bar, then one working surface per tab — summary first, detail below. */
+:root{
+  --brand:#0D5540; --brand-ink:#ffffff; --sun:#FFE901;
+  --bg:#F3F5F1; --panel:#FFFFFF; --panel-2:#E9EFE9; --line:#D4DDD5; --line-strong:#B3C2B6;
+  --fg:#10261D; --muted:#4E6358; --faint:#7A8C81;
+  --accent:#0D5540; --accent-soft:#DCEBE1; --hl:#FFF6A8; --hl-ink:#3D3300;
+  --s-base:#1E8A5E; --s-scen:#C08A00;
+  --up:#A33A16; --down:#16794A; --warn:#8A6100; --warn-bg:#FFF3C4;
+  --font-display:"Zilla Slab", Rockwell, "Roboto Slab", Georgia, serif;
+  --font-body:"Public Sans", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0B2219; --panel:#123B2E; --panel-2:#174535; --line:#255C48; --line-strong:#3A7560;
+  --fg:#E8F1EB; --muted:#A9C2B4; --faint:#7E9B8C;
+  --accent:#7FD3A8; --accent-soft:#1B4D3B; --hl:#4A4310; --hl-ink:#FFF2A0;
+  --s-base:#2F8C66; --s-scen:#B08A0C;
+  --up:#FF9B73; --down:#6FD9A0; --warn:#F2C94C; --warn-bg:#3A3410; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0B2219; --panel:#123B2E; --panel-2:#174535; --line:#255C48; --line-strong:#3A7560;
+  --fg:#E8F1EB; --muted:#A9C2B4; --faint:#7E9B8C;
+  --accent:#7FD3A8; --accent-soft:#1B4D3B; --hl:#4A4310; --hl-ink:#FFF2A0;
+  --s-base:#2F8C66; --s-scen:#B08A0C;
+  --up:#FF9B73; --down:#6FD9A0; --warn:#F2C94C; --warn-bg:#3A3410; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:14px;line-height:1.45;margin:0}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--brand)}
+.gut{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1360px;margin:0 auto}
+.num,td.n,th.n{font-variant-numeric:tabular-nums}
+h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--s-scen);outline-offset:2px}
+
+/* header */
+.band{background:var(--brand);color:var(--brand-ink);padding-block:14px}
+.band .wrap{display:flex;gap:16px 24px;align-items:center;flex-wrap:wrap}
+.band img{height:52px;width:auto;border-radius:6px;display:block}
+.band .ttl{flex:1 1 280px;min-width:0}
+.band h1{font-size:clamp(22px,3vw,30px);font-weight:700;line-height:1.1}
+.band .sub{font-size:13px;opacity:.85;margin-top:2px}
+.band .tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:600;white-space:nowrap}
+.pill.base{background:rgba(255,255,255,.14);color:#fff}
+.pill.scen{background:var(--sun);color:#1d1a00}
+.btn{border:1px solid var(--line-strong);background:var(--panel);color:var(--fg);border-radius:8px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px}
+.btn:hover{border-color:var(--accent)}
+.btn.sun{background:var(--sun);border-color:var(--sun);color:#1d1a00}
+.btn.ghost{background:transparent;border-color:rgba(255,255,255,.5);color:#fff}
+.btn.small{padding:4px 9px;font-size:12px}
+.btn[disabled]{opacity:.45;cursor:default}
+
+/* tabs */
+.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--panel);border-bottom:1px solid var(--line)}
+.tabs .wrap{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+.tabs a{padding:12px 14px;text-decoration:none;color:var(--muted);font-weight:600;font-size:13.5px;border-bottom:3px solid transparent;white-space:nowrap}
+.tabs a[aria-current="page"]{color:var(--fg);border-bottom-color:var(--sun)}
+.tabs a:hover{color:var(--fg)}
+
+main{padding-block:20px 48px}
+section.view{display:flex;flex-direction:column;gap:18px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+.panel h2{font-size:19px;font-weight:600}
+.panel h3{font-size:16px;font-weight:600}
+.phead{display:flex;gap:8px 16px;align-items:baseline;justify-content:space-between;flex-wrap:wrap;margin-bottom:12px}
+.lede{color:var(--muted);font-size:13px;max-width:72ch;margin:4px 0 0}
+.eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.kpi .v{font-family:var(--font-display);font-size:28px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi .d{font-size:12.5px;color:var(--muted)}
+.kpi.lead{background:var(--brand);border-color:var(--brand);color:#fff}
+.kpi.lead .eyebrow,.kpi.lead .d{color:rgba(255,255,255,.8)}
+.kpi.lead .v{color:var(--sun)}
+.up{color:var(--up)} .down{color:var(--down)}
+.chip{display:inline-block;border-radius:6px;padding:1px 7px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.chip.c{background:var(--accent-soft);color:var(--accent)}
+.chip.s{background:var(--panel-2);color:var(--muted)}
+.chip.w{background:var(--warn-bg);color:var(--warn)}
+.chip.m{background:var(--hl);color:var(--hl-ink)}
+
+.callout{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.callout > div{border-left:4px solid var(--line-strong);padding:4px 0 4px 12px;min-width:0}
+.callout > div.op{border-left-color:var(--s-base)}
+.callout > div.ch{border-left-color:var(--s-scen)}
+.callout p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.callout b{color:var(--fg)}
+
+.grid2{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:18px}
+@media (max-width:900px){.grid2{grid-template-columns:minmax(0,1fr)}}
+
+.seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:6px 11px;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--panel)}
+:root[data-theme="dark"] .seg button[aria-pressed="true"]{color:#0B2219}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .seg button[aria-pressed="true"]{color:#0B2219}}
+
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);align-items:center}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-2px}
+.chart{width:100%;position:relative}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart text{fill:var(--muted);font-size:11px;font-family:var(--font-body)}
+.chart .grid line{stroke:var(--line);stroke-width:1}
+.chart .axis{stroke:var(--line-strong)}
+.tip{position:fixed;pointer-events:none;background:var(--panel);border:1px solid var(--line-strong);border-radius:8px;padding:8px 10px;font-size:12px;box-shadow:0 6px 20px rgba(0,0,0,.18);z-index:50;min-width:150px;max-width:260px}
+.tip .t{font-weight:700;margin-bottom:4px}
+.tip .r{display:flex;justify-content:space-between;gap:12px;font-variant-numeric:tabular-nums}
+
+/* tables */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:11.5px;font-weight:600;color:var(--muted);background:var(--panel-2);position:sticky;top:0;z-index:1}
+th.n,td.n{text-align:right}
+tbody tr:hover td{background:var(--panel-2)}
+tr.tot td{font-weight:700;border-top:2px solid var(--line-strong);background:var(--panel-2)}
+tr.moved td{background:var(--hl)}
+tr.moved td, tr.moved td .sub2{color:var(--hl-ink)}
+tr.grp td{font-weight:700;background:var(--accent-soft);color:var(--accent)}
+td .sub2{display:block;font-size:11.5px;color:var(--faint)}
+td select{padding:4px 6px;border:1px solid var(--line-strong);border-radius:6px;background:var(--panel);max-width:190px}
+.bar-cell{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:12px}
+.filters label{display:flex;flex-direction:column;gap:3px;font-size:11.5px;color:var(--muted);font-weight:600}
+.filters select,.filters input{padding:6px 8px;border:1px solid var(--line-strong);border-radius:6px;background:var(--panel);min-width:0}
+.filters input[type=search]{width:160px}
+
+/* utilization cards */
+.ucards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,330px),1fr));gap:14px}
+.ucard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.ucard.changed{border-color:var(--s-scen);box-shadow:inset 4px 0 0 var(--s-scen)}
+.ucard .hd{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+.ucard h3{font-size:17px}
+.mrow{display:grid;grid-template-columns:minmax(0,1.4fr) repeat(3,minmax(0,1fr));gap:4px 8px;font-size:12.5px;align-items:baseline}
+.mrow.h{font-size:11px;color:var(--faint);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.04em}
+.mrow span:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.mrow span:first-child{color:var(--muted)}
+.ucard .note{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);padding-top:8px}
+.meter{height:8px;background:var(--panel-2);border-radius:4px;position:relative;overflow:hidden}
+.meter i{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
+
+/* assumptions */
+.agrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.field label{font-size:12.5px;font-weight:600}
+.field small{color:var(--muted);font-size:12px}
+.field input{padding:6px 8px;border:1px solid var(--line-strong);border-radius:6px;background:var(--panel);width:130px;font-variant-numeric:tabular-nums}
+.rate-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:6px}
+.rate-grid label{display:flex;flex-direction:column;font-size:11px;color:var(--muted);gap:2px}
+.rate-grid input{width:100%;padding:5px 6px;border:1px solid var(--line-strong);border-radius:6px;background:var(--panel);font-variant-numeric:tabular-nums}
+.rules{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+.rules li{padding-left:14px;position:relative;color:var(--muted);font-size:13px;max-width:90ch}
+.rules li::before{content:"";position:absolute;left:0;top:8px;width:6px;height:6px;border-radius:2px;background:var(--s-scen)}
+.rules li b{color:var(--fg)}
+.moves{display:flex;flex-direction:column;gap:6px}
+.move{display:flex;gap:8px;align-items:center;justify-content:space-between;background:var(--hl);color:var(--hl-ink);border-radius:8px;padding:6px 10px;font-size:12.5px;flex-wrap:wrap}
+.empty{color:var(--muted);font-size:13px;padding:10px;border:1px dashed var(--line-strong);border-radius:8px}
+.vol input{width:80px;padding:4px 6px;border:1px solid var(--line-strong);border-radius:6px;background:var(--panel);text-align:right}
+.toast{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:13px;z-index:60}
+@media (prefers-reduced-motion: no-preference){.ucard,.kpi{transition:border-color .2s}}
+</style>
+
+<header class="band gut">
+  <div class="wrap">
+    <img src="__LOGO__" alt="McCoy's Building Supply">
+    <div class="ttl">
+      <h1>Region 5 Fleet Forecast · 2027</h1>
+      <div class="sub">355CD Pharr Central Delivery, 355 Pharr Reload and 11 stores · 126 assets · baseline vs. reassignment scenario</div>
+    </div>
+    <div class="tools">
+      <span class="pill base" id="hdrStatus">Baseline only</span>
+      <button class="btn ghost small" id="btnReset" type="button">Reset scenario</button>
+    </div>
+  </div>
+</header>
+<nav class="tabs gut" aria-label="Sections">
+  <div class="wrap" id="tabs">
+    <a href="#overview" data-v="overview">Overview</a>
+    <a href="#reassign" data-v="reassign">Reassign assets</a>
+    <a href="#utilization" data-v="utilization">Store utilization</a>
+    <a href="#detail" data-v="detail">Forecast detail</a>
+    <a href="#assumptions" data-v="assumptions">Assumptions &amp; data</a>
+  </div>
+</nav>
+
+<main class="gut"><div class="wrap">
+
+<!-- OVERVIEW -->
+<section class="view" id="v-overview">
+  <div class="kpis" id="kpis"></div>
+  <div class="panel">
+    <div class="callout">
+      <div class="ch"><span class="eyebrow">Location charges</span><p><b>What each location is charged under the cost rules.</b> 355CD and 355 Reload carry fuel, maintenance, depreciation and lease. Stores carry fuel, the fixed flat rate and $0.425 per truck mile. Moving an asset changes which rule applies, so this view moves money between locations.</p></div>
+      <div class="op"><span class="eyebrow">Operating cost</span><p><b>What McCoy's actually spends in Region 5.</b> Fuel, maintenance, depreciation and lease for every Region 5 asset, wherever it sits. Flat rates and mileage charges are internal and left out. Only a real change in miles, fuel or fleet size moves this number.</p></div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="panel">
+      <div class="phead">
+        <div><h2>Monthly forecast</h2><p class="lede" id="monthLede"></p></div>
+        <div class="seg" role="group" aria-label="Cost view" data-seg="view"><button type="button" data-val="charge">Location charges</button><button type="button" data-val="op">Operating cost</button></div>
+      </div>
+      <div class="legend"><span><i style="background:var(--s-base)"></i>Baseline</span><span><i style="background:var(--s-scen)"></i>Scenario</span></div>
+      <div class="chart" id="chMonth"></div>
+    </div>
+    <div class="panel">
+      <div class="phead"><div><h2>By cost category</h2><p class="lede">Annual 2027, same view as the monthly chart.</p></div></div>
+      <div class="legend"><span><i style="background:var(--s-base)"></i>Baseline</span><span><i style="background:var(--s-scen)"></i>Scenario</span></div>
+      <div class="chart" id="chCat"></div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="phead"><div><h2>By location</h2><p class="lede">Annual 2027. The change column shows where charges land; the last column shows what that location's assets actually cost the company.</p></div></div>
+    <div class="tbl-wrap"><table id="tLoc"></table></div>
+  </div>
+</section>
+
+<!-- REASSIGN -->
+<section class="view" id="v-reassign" hidden>
+  <div class="grid2">
+    <div class="panel">
+      <div class="phead"><div><h2>Moves in this scenario</h2><p class="lede">Pick a new location for any asset in the table below. Costs, mileage and utilization update immediately using the destination's rules.</p></div>
+        <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small sun" id="btnCopyScen" type="button">Copy scenario</button><button class="btn small" id="btnOld" type="button" hidden>Restore my earlier moves</button><button class="btn small" id="btnPreset" type="button">Load starting scenario</button><button class="btn small" id="btnReset2" type="button">Reset scenario</button></span></div>
+      <textarea id="scenText" hidden readonly rows="6" style="width:100%;margin-bottom:10px;font-family:var(--font-mono);font-size:12px;border:1px solid var(--line-strong);border-radius:6px;background:var(--panel);color:var(--fg);padding:8px" aria-label="Scenario as text"></textarea>
+      <div class="moves" id="movesList"></div>
+    </div>
+    <div class="panel">
+      <div class="phead"><div><h2>How a move changes usage</h2></div></div>
+      <ul class="rules">
+        <li><b>Delivery volume follows the truck.</b> Each truck moved from 355CD to a store it serves brings <span id="vptTxt">593</span> deliveries a year (355CD's average per truck), up to the store's total 355CD volume. Set a different number per store below.</li>
+        <li><b>Miles move at the store's miles per delivery.</b> The store gains those miles and 355CD loses the same miles, so region miles stay flat. No mileage savings are claimed.</li>
+        <li><b>Work without volume stays put.</b> A truck moved with no volume (store to store, from 355 Reload, or to Laredo, Del Rio or Eagle Pass) leaves its miles with the trucks that remain at the origin.</li>
+        <li><b>Forklifts carry their propane.</b> TMFLs and trailers have no separate fuel.</li>
+        <li><b>Terminate or relocate out.</b> The asset's costs leave Region 5 from its effective month. Its work stays: miles and fuel pass to the remaining trucks at that location, propane to the remaining forklifts. Terminating saves the company its maintenance, depreciation and lease; relocating out moves those costs to another region.</li>
+        <li><b>Effective month.</b> Every change starts in the month you pick (default January). Utilization shows the full-year rate after all changes.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="phead"><div><h2>Deliveries returned from 355CD</h2><p class="lede">Annualized (Jan–Sep × 12/9). "Auto" uses trucks moved × deliveries per truck. Type a number to override.</p></div></div>
+    <div class="tbl-wrap"><table id="tVol"></table></div>
+  </div>
+  <div class="panel">
+    <div class="phead"><div><h2>Assets</h2><p class="lede">Annual 2027 location charges. Highlighted rows are moved.</p></div></div>
+    <div class="filters">
+      <label>Current location<select id="fLoc"></select></label>
+      <label>Asset class<select id="fCls"><option value="">All</option><option>Truck</option><option>Trailer</option><option>Forklift</option><option>TMFL</option></select></label>
+      <label>Search<input type="search" id="fQ" placeholder="Asset # or type"></label>
+      <label>Show<select id="fMoved"><option value="">All assets</option><option value="1">Moved only</option></select></label>
+    </div>
+    <div class="tbl-wrap" style="max-height:640px"><table id="tAssets"></table></div>
+  </div>
+</section>
+
+<!-- UTILIZATION -->
+<section class="view" id="v-utilization" hidden>
+  <div class="panel">
+    <div class="phead"><div><h2>Store utilization, baseline vs. scenario</h2>
+      <p class="lede">Averages (utilization, cost per delivery, cost per mile) are the Jan–Sep 2026 figures held as annual. Totals are annualized ×12/9. Cost per delivery and per mile use the source definition: (flat-rate charges + fuel) ÷ deliveries or miles, with 2026 fuel cost per mile. The $0.425 mileage charge is shown on its own line. Utilization scales with deliveries per truck and is capped at 100%.</p></div>
+      <div class="seg" role="group" aria-label="Card filter" data-seg="ufilter"><button type="button" data-val="all">All locations</button><button type="button" data-val="changed">Changed only</button></div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="phead"><div><h2>Forklift utilization</h2>
+      <p class="lede" id="fkLede">Operating hours per forklift per day (DVIR readings through 10/14/2026) against the company store average, and forklift-required yard tickets Oct 2025–Sep 2026. Store yard work stays with the store, so a moved forklift spreads the same hours and tickets across one more unit. 355CD's forklift hours scale with its remaining deliveries: when trucks take deliveries back to the stores, 355CD's forklift work shrinks in proportion.</p></div></div>
+    <div class="tbl-wrap"><table id="tFk"></table></div>
+  </div>
+  <div class="phead" style="margin:4px 0 -6px"><h2 style="font-size:19px">Delivery trucks</h2></div>
+  <div class="ucards" id="ucards"></div>
+</section>
+
+<!-- DETAIL -->
+<section class="view" id="v-detail" hidden>
+  <div class="panel">
+    <div class="phead"><div><h2>Monthly forecast by location</h2><p class="lede" id="detLede"></p></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div class="seg" role="group" aria-label="Case" data-seg="dcase"><button type="button" data-val="base">Baseline</button><button type="button" data-val="scen">Scenario</button><button type="button" data-val="delta">Change</button></div>
+        <div class="seg" role="group" aria-label="Cost view" data-seg="view"><button type="button" data-val="charge">Charges</button><button type="button" data-val="op">Operating</button></div>
+      </div></div>
+    <div class="filters"><label>Cost category<select id="dCat"></select></label><button class="btn small" type="button" id="copyMonth">Copy table as CSV</button></div>
+    <div class="tbl-wrap"><table id="tMonth"></table></div>
+  </div>
+  <div class="panel">
+    <div class="phead"><div><h2>Asset detail</h2><p class="lede">Annual 2027 by cost category for the selected case and view.</p></div></div>
+    <div class="filters"><label>Location<select id="aLoc"></select></label><label>Search<input type="search" id="aQ" placeholder="Asset # or type"></label><button class="btn small" type="button" id="copyAsset">Copy table as CSV</button></div>
+    <div class="tbl-wrap" style="max-height:640px"><table id="tAssetDet"></table></div>
+  </div>
+</section>
+
+<!-- ASSUMPTIONS -->
+<section class="view" id="v-assumptions" hidden>
+  <div class="panel">
+    <div class="phead"><div><h2>Forecast inputs</h2><p class="lede">Changes apply to both the baseline and the scenario, so the comparison stays like-for-like. Inputs are remembered in this browser only.</p></div>
+      <button class="btn small" id="btnResetA" type="button">Restore default inputs</button></div>
+    <div class="agrid">
+      <div>
+        <div class="field"><label for="iGrowth">Truck mileage change vs. last 12 months (%)</label><input id="iGrowth" type="number" step="0.5"><small>Applies to every truck's baseline miles, fuel gallons and mileage charge.</small></div>
+        <div class="field"><label for="iMaint">Maintenance trend vs. last 12 months (%)</label><input id="iMaint" type="number" step="0.5"><small>Store spend fell about 13% year over year; 355CD rose 6%.</small></div>
+        <div class="field"><label for="iMile">Store mileage charge ($ per mile)</label><input id="iMile" type="number" step="0.005"></div>
+        <div class="field"><label for="iVpt">Deliveries per moved truck (per year)</label><input id="iVpt" type="number" step="1"><small>Default = 355CD annual deliveries ÷ 12 trucks.</small></div>
+      </div>
+      <div>
+        <h3 style="margin-bottom:8px">Blended fuel rate, $/gal</h3>
+        <div class="rate-grid" id="gFuel"></div>
+        <h3 style="margin:14px 0 8px">Propane planning price, $/gal</h3>
+        <div class="rate-grid" id="gLp"></div>
+      </div>
+      <div>
+        <h3 style="margin-bottom:8px">Store flat rates, $/month</h3>
+        <div class="tbl-wrap"><table id="tFlat"></table></div>
+      </div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="phead"><h2>Method</h2></div>
+    <ul class="rules">
+      <li><b>Scope.</b> 126 active assets: the asset roster at 355CD (29 + truck 750049, which is missing from the roster but active at 355CD in the Aug 2026 fleet list), 355 Pharr Reload (11) and stores 015, 033, 037, 041, 088, 089, 093, 097, 100, 103, 108. Rio Truss (950) and 765 are excluded. The roster sets location and in-service date.</li>
+      <li><b>Cost rules.</b> 355CD and 355 Reload: fuel + maintenance + depreciation + lease. Stores: fuel + flat rate, plus $0.425 per mile for trucks. Trailers, forklifts and TMFLs at stores get only the flat rate plus fuel (propane for forklifts).</li>
+      <li><b>Fuel.</b> 12 months of WEX gallons (Oct 2025–Sep 2026; diesel, gasoline and DEF combined) × the 2027 blended monthly rate. Propane: AmeriGas gallons by location for the same months, split evenly across forklifts (033/355/355CD combined total split 3/3/7 by forklift count) × the propane planning price. TMFLs have no separate fuel.</li>
+      <li><b>Miles.</b> Geotab miles Oct 2025–Sep 2026; blank months are treated as missing, and the reported-month average × 12 is used. Loaner IDs (e.g. 033-765-694008-flb-LOANER) are matched on the asset number. 626003 uses predecessor 692009. 758005 uses its Jul–Sep run rate. 758011 and 626005 use the 355CD same-type average.</li>
+      <li><b>Maintenance.</b> Vendor invoices Oct 2025–Sep 2026 (2025 and 2026 spend files, all invoice statuses, credits netted), spread evenly across 2027.</li>
+      <li><b>Depreciation.</b> Monthly amount from the March 2026 file (components such as wraps and kits summed by asset). New units: 758005/758011 $166,407.25 ÷ 60; 626003/626005 $71,123.99 ÷ 60. The in-service month is month 1; trucks and trailers stop after 60 months, forklifts and TMFLs after 84. Leased assets get no depreciation.</li>
+      <li><b>Leases.</b> Fixed monthly rate from the lease file. 747104 ($250) and 747106 ($150) are on holding rentals. 380030, 380042, 380067 and 380068 had no rate, so the batch rate of $447.11 is used. All leases run through Dec 2027.</li>
+      <li><b>Forklift utilization.</b> Operating hours per forklift per day from DVIR readings through 10/14/2026, compared with the company store average of 3.339; forklift-required yard tickets Oct 2025–Sep 2026 over 307 business days. 355CD has no yard tickets, so its forklift hours scale with its remaining deliveries (deliveries per day over 307 days shown instead); 355 Reload has no data. Store moves spread the store's hours and tickets over the new forklift count.</li>
+      <li><b>Utilization.</b> Region 05 store metrics Jan–Sep 2026. Averages are held as annual figures; totals are ×12/9. 355CD deliveries by store served, ×12/9. 355 Reload has no delivery metrics.</li>
+    </ul>
+  </div>
+  <div class="panel">
+    <div class="phead"><div><h2>Data flags</h2><p class="lede">Estimates and gaps carried in the forecast.</p></div></div>
+    <div class="tbl-wrap" style="max-height:520px"><table id="tFlags"></table></div>
+  </div>
+</section>
+
+</div></main>
+<div class="tip" id="tip" hidden></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const DATA = __DATA__;
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const LOCS = DATA.locations; const LOC = Object.fromEntries(LOCS.map(l => [l.id, l]));
+const isCentral = id => !!LOC[id] && LOC[id].kind === 'Central';
+const REM = new Set(['TERM', 'OUT']);
+const REM_LABEL = {TERM: 'Terminated (sold / lease returned)', OUT: 'Relocated out of Region 5'};
+const locShort = id => id === 'TERM' ? 'Terminated' : id === 'OUT' ? 'Out of region' : id;
+const ASSETS = DATA.assets; const AMAP = Object.fromEntries(ASSETS.map(a => [a.id, a]));
+const CATS_CH = ['Fuel','Maintenance','Depreciation','Lease','Flat rate','Mileage charge'];
+const CATS_OP = ['Fuel','Maintenance','Depreciation','Lease'];
+const N355 = ASSETS.filter(a => a.loc === '355CD' && a.cls === 'Truck').length;
+const SERVED_TOTAL = Object.values(DATA.served).reduce((s, v) => s + v, 0);
+const DEF = () => ({fuelRate: DATA.fuelRate.slice(), lpRate: DATA.lpRate.slice(), mileRate: DATA.mileRate,
+  maintTrend: 0, mileGrowth: 0, vpt: Math.round(SERVED_TOTAL / N355), flat: Object.assign({}, DATA.flat)});
+const KEY = 'r5fleet2027.v2';
+const PRESET = () => ({assign: {'749002': 'TERM', '758005': 'TERM', '380041': 'OUT'}, eff: {'758005': 6}});
+let S = {assign: PRESET().assign, volOv: {}, eff: PRESET().eff, p: DEF(), view: 'charge', dcase: 'scen', ufilter: 'all'};
+let OLD = null; try { const r1 = localStorage.getItem('r5fleet2027.v1'); if (r1) { const o1 = JSON.parse(r1); if (o1 && o1.assign && Object.keys(o1.assign).length) OLD = o1; } } catch (e) {}
+function loadState(o) { S = Object.assign(S, o); S.eff = o.eff || {}; S.volOv = o.volOv || {}; S.p = Object.assign(DEF(), o.p || {}); }
+try { const raw = localStorage.getItem(KEY); const o = raw ? JSON.parse(raw) : null;
+  if (OLD && !(o && o.restored)) { loadState(OLD); S.restored = true; localStorage.setItem(KEY, JSON.stringify(S)); }
+  else if (o) loadState(o); } catch (e) {}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+
+/* ---------- formatting ---------- */
+const f0 = new Intl.NumberFormat('en-US', {maximumFractionDigits: 0});
+const f1 = new Intl.NumberFormat('en-US', {maximumFractionDigits: 1, minimumFractionDigits: 1});
+const usd = v => (v < 0 ? '-$' : '$') + f0.format(Math.abs(Math.round(v)));
+const usd2 = v => (v < 0 ? '-$' : '$') + Math.abs(v).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const usdK = v => { const a = Math.abs(v); const s = v < 0 ? '-$' : '$'; return a >= 1e6 ? s + (a / 1e6).toFixed(2) + 'M' : a >= 1e4 ? s + Math.round(a / 1e3) + 'K' : s + f0.format(Math.round(a)); };
+const sgn = v => Math.abs(v) < 0.5 ? '$0' : (v > 0 ? '+' : '-') + '$' + f0.format(Math.abs(Math.round(v)));
+const sgnK = v => Math.abs(v) < 0.5 ? '$0' : (v > 0 ? '+' : '') + usdK(v);
+const pct = v => (v * 100).toFixed(1) + '%';
+const dcls = v => Math.abs(v) < 0.5 ? '' : v > 0 ? 'up' : 'down';
+const locLabel = id => REM.has(id) ? REM_LABEL[id] : id + ' ' + LOC[id].name;
+function el(tag, attrs, ...kids) { const e = document.createElement(tag); if (attrs) for (const k in attrs) { if (k === 'class') e.className = attrs[k]; else if (k === 'text') e.textContent = attrs[k]; else e.setAttribute(k, attrs[k]); } for (const k of kids) if (k != null) e.append(k); return e; }
+
+/* ---------- model ---------- */
+function volumes(assign) {
+  const moved = {};
+  for (const a of ASSETS) { const to = assign[a.id]; if (a.cls === 'Truck' && a.loc === '355CD' && to && to !== '355CD') moved[to] = (moved[to] || 0) + 1; }
+  const out = {};
+  for (const s in DATA.served) {
+    const auto = Math.min((moved[s] || 0) * S.p.vpt, DATA.served[s]);
+    const ov = S.volOv[s];
+    out[s] = {auto, trucks: moved[s] || 0, v: (ov === undefined || ov === null || ov === '') ? auto : Math.max(0, Math.min(+ov, DATA.served[s])), ov: !(ov === undefined || ov === null || ov === '')};
+  }
+  return out;
+}
+function run(assign) {
+  const g = 1 + S.p.mileGrowth / 100, mt = 1 + S.p.maintTrend / 100;
+  const vol = volumes(assign);
+  const locOf = a => assign[a.id] || a.loc;
+  const b = {}; ASSETS.forEach(a => { if (a.cls === 'Truck') b[a.id] = a.miles * g; });
+  const target = {}; LOCS.forEach(l => target[l.id] = 0);
+  ASSETS.forEach(a => { if (a.cls === 'Truck') target[a.loc] += b[a.id]; });
+  let volMiles = 0;
+  for (const s in vol) { const m = vol[s].v * DATA.metrics[s].mpd * g; target[s] += m; volMiles += m; }
+  target['355CD'] -= volMiles;
+  const miles = {}; const unalloc = {};
+  for (const l of LOCS) {
+    const present = ASSETS.filter(a => a.cls === 'Truck' && locOf(a) === l.id);
+    const stayed = present.filter(a => a.loc === l.id), arrived = present.filter(a => a.loc !== l.id);
+    const sb = stayed.reduce((s, a) => s + b[a.id], 0);
+    const T = Math.max(0, target[l.id]); const rem = T - sb;
+    if (rem >= 0) {
+      stayed.forEach(a => miles[a.id] = b[a.id]);
+      if (arrived.length) arrived.forEach(a => miles[a.id] = rem / arrived.length);
+      else if (sb > 0) stayed.forEach(a => miles[a.id] = b[a.id] * T / sb);
+      else if (rem > 1) unalloc[l.id] = rem;
+    } else { stayed.forEach(a => miles[a.id] = sb > 0 ? b[a.id] * T / sb : 0); arrived.forEach(a => miles[a.id] = 0); }
+  }
+  const lpPool = {}, fkAt = {};
+  ASSETS.forEach(a => { if (a.cls !== 'Forklift') return; const l = locOf(a); if (REM.has(l)) lpPool[a.loc] = (lpPool[a.loc] || 0) + a.lp; else fkAt[l] = (fkAt[l] || 0) + 1; });
+  const rows = ASSETS.map(a => {
+    const loc = locOf(a); const central = isCentral(loc);
+    if (REM.has(loc)) { const ch = {}, op = {}; CATS_CH.forEach(c => ch[c] = new Array(12).fill(0)); CATS_OP.forEach(c => op[c] = new Array(12).fill(0)); return {a, loc, miles: 0, gal: 0, lp: 0, ch, op, parts: [{loc, ch, op}]}; }
+    const ch = {}, op = {}; CATS_CH.forEach(c => ch[c] = new Array(12).fill(0)); CATS_OP.forEach(c => op[c] = new Array(12).fill(0));
+    let m = 0, gal = 0;
+    if (a.cls === 'Truck') { m = miles[a.id] || 0; gal = Math.max(0, a.gal * g + (m - a.miles * g) * a.gpm); }
+    const lp = a.cls === 'Forklift' ? a.lp + (lpPool[loc] && fkAt[loc] ? lpPool[loc] / fkAt[loc] : 0) : 0;
+    const flat = S.p.flat[a.type] || 0;
+    for (let i = 0; i < 12; i++) {
+      const fuel = gal / 12 * S.p.fuelRate[i] + lp / 12 * S.p.lpRate[i];
+      const maint = a.maint * mt / 12, dep = a.dep * a.depElig[i], lease = a.lease;
+      op.Fuel[i] = fuel; op.Maintenance[i] = maint; op.Depreciation[i] = dep; op.Lease[i] = lease;
+      ch.Fuel[i] = fuel;
+      if (central) { ch.Maintenance[i] = maint; ch.Depreciation[i] = dep; ch.Lease[i] = lease; }
+      else { ch['Flat rate'][i] = flat; if (a.cls === 'Truck') ch['Mileage charge'][i] = m / 12 * S.p.mileRate; }
+    }
+    return {a, loc, miles: m, gal, lp, ch, op, parts: [{loc, ch, op}]};
+  });
+  const lpLost = {}; for (const l in lpPool) if (!fkAt[l]) lpLost[l] = lpPool[l];
+  return {rows, vol, unalloc, lpLost};
+}
+function runEff(assign) {
+  const runs = [], cache = {};
+  for (let i = 0; i < 12; i++) { const ai = {}; for (const k in assign) if ((S.eff[k] || 0) <= i) ai[k] = assign[k]; const key = JSON.stringify(ai); runs.push(cache[key] || (cache[key] = run(ai))); }
+  const end = runs[11];
+  const rows = end.rows.map((r, k) => { const o = {a: r.a, loc: r.loc, miles: 0, gal: 0, lp: 0, ch: {}, op: {}};
+    CATS_CH.forEach(c => o.ch[c] = runs.map((x, i) => x.rows[k].ch[c][i])); CATS_OP.forEach(c => o.op[c] = runs.map((x, i) => x.rows[k].op[c][i]));
+    runs.forEach(x => { o.miles += x.rows[k].miles / 12; o.gal += x.rows[k].gal / 12; o.lp += x.rows[k].lp / 12; });
+    const locM = runs.map(x => x.rows[k].loc); o.parts = [...new Set(locM)].map(l => { const pc = {}, po = {};
+      CATS_CH.forEach(c => pc[c] = o.ch[c].map((v, i) => locM[i] === l ? v : 0)); CATS_OP.forEach(c => po[c] = o.op[c].map((v, i) => locM[i] === l ? v : 0)); return {loc: l, ch: pc, op: po}; });
+    return o; });
+  return {rows, vol: end.vol, unalloc: end.unalloc, lpLost: end.lpLost};
+}
+const sum12 = arr => arr.reduce((s, v) => s + v, 0);
+function totals(res, view, filter) {
+  const cats = view === 'op' ? CATS_OP : CATS_CH; const key = view === 'op' ? 'op' : 'ch';
+  const byM = new Array(12).fill(0), byC = {}; cats.forEach(c => byC[c] = 0);
+  for (const r of res.rows) for (const pt of r.parts) { if (filter && !filter(pt)) continue; for (const c of cats) { const arr = pt[key][c]; for (let i = 0; i < 12; i++) { byM[i] += arr[i]; byC[c] += arr[i]; } } }
+  return {byM, byC, total: sum12(byM)};
+}
+const assetTotal = (r, view) => (view === 'op' ? CATS_OP : CATS_CH).reduce((s, c) => s + sum12(r[view === 'op' ? 'op' : 'ch'][c]), 0);
+
+/* ---------- utilization ---------- */
+function utilization(base, scen) {
+  const out = [];
+  const trucksAt = (res, id) => res.rows.filter(r => r.a.cls === 'Truck' && r.loc === id);
+  for (const id of Object.keys(DATA.metrics)) {
+    const M = DATA.metrics[id];
+    const N = trucksAt(base, id).length, N2 = trucksAt(scen, id).length;
+    let dV = 0, dMi = 0;
+    if (id === '355CD') { for (const s in scen.vol) { dV -= scen.vol[s].v; dMi -= scen.vol[s].v * DATA.metrics[s].mpd; } }
+    else if (scen.vol[id]) { dV = scen.vol[id].v; dMi = dV * M.mpd; }
+    const arrived = trucksAt(scen, id).filter(r => r.a.loc !== id), departed = base.rows.filter(r => r.a.cls === 'Truck' && r.a.loc === id && (S.assign[r.a.id] || id) !== id);
+    const dFC = 12 * (arrived.reduce((s, r) => s + (S.p.flat[r.a.type] || 0), 0) - departed.reduce((s, r) => s + (S.p.flat[r.a.type] || 0), 0));
+    const D2 = Math.max(0, M.deliveries + dV), mi2 = Math.max(0, M.miles + dMi), r = M.deliveries ? D2 / M.deliveries : 0;
+    const FC2 = Math.max(0, M.fleetCharge + dFC), fuel2 = M.miles ? M.fuel * mi2 / M.miles : 0;
+    const scale = N2 ? r * N / N2 : 0;
+    const changed = Math.abs(dV) > 0.5 || N !== N2 || Math.abs(dFC) > 0.5;
+    out.push({id, M, N, N2, changed, dV, dFC, D: M.deliveries, D2, mi: M.miles, mi2, trips: M.trips, trips2: M.trips * r,
+      fc: M.fleetCharge, fc2: FC2, fuel: M.fuel, fuel2,
+      cpd: (M.fleetCharge + M.fuel) / M.deliveries, cpd2: D2 ? (FC2 + fuel2) / D2 : NaN,
+      cpm: (M.fleetCharge + M.fuel) / M.miles, cpm2: mi2 ? (FC2 + fuel2) / mi2 : NaN,
+      ta: M.timeAway, ta2: Math.min(1, M.timeAway * scale), da: M.daysActive, da2: Math.min(1, M.daysActive * scale),
+      dd: M.dailyDel, dd2: M.dailyDel * r, dpt: N ? M.deliveries / N : 0, dpt2: N2 ? D2 / N2 : 0,
+      milech: dMi * S.p.mileRate});
+  }
+  return out;
+}
+
+/* ---------- tooltip ---------- */
+const tip = document.getElementById('tip');
+function showTip(ev, html) { tip.innerHTML = html; tip.hidden = false; const w = tip.offsetWidth, h = tip.offsetHeight; let x = ev.clientX + 14, y = ev.clientY + 14; if (x + w > innerWidth - 8) x = ev.clientX - w - 14; if (y + h > innerHeight - 8) y = ev.clientY - h - 14; tip.style.left = Math.max(8, x) + 'px'; tip.style.top = Math.max(8, y) + 'px'; }
+function hideTip() { tip.hidden = true; }
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+
+/* ---------- charts ---------- */
+const NS = 'http://www.w3.org/2000/svg';
+function sv(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.append(e); return e; }
+function niceMax(v) { if (v <= 0) return 1; const p = Math.pow(10, Math.floor(Math.log10(v))); const n = v / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p; }
+function barPath(x, y, w, h, r) { r = Math.min(r, w / 2, h); if (h <= 0) return ''; return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`; }
+function hbarPath(x, y, w, h, r) { r = Math.min(r, h / 2, w); if (w <= 0) return ''; return `M${x},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h - r}Q${x + w},${y + h} ${x + w - r},${y + h}H${x}Z`; }
+function drawMonthly(host, base, scen) {
+  host.innerHTML = ''; const W = Math.max(320, host.clientWidth || 640), H = 280, ml = 56, mr = 8, mt = 10, mb = 26;
+  const svg = sv('svg', {viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Monthly 2027 forecast, baseline vs scenario'}, host);
+  const step0 = niceMax(Math.max(...base, ...scen) / 4), nT = Math.ceil(Math.max(...base, ...scen) * 1.02 / step0), max = step0 * nT, iw = W - ml - mr, ih = H - mt - mb;
+  const y = v => mt + ih - v / max * ih; const gG = sv('g', {class: 'grid'}, svg);
+  for (let k = 0; k <= nT; k++) { const v = step0 * k; sv('line', {x1: ml, x2: W - mr, y1: y(v), y2: y(v)}, gG); const t = sv('text', {x: ml - 8, y: y(v) + 4, 'text-anchor': 'end'}, svg); t.textContent = usdK(v); }
+  const step = iw / 12, bw = Math.max(4, Math.min(22, (step - 10) / 2));
+  for (let i = 0; i < 12; i++) {
+    const cx = ml + step * i + step / 2;
+    sv('path', {d: barPath(cx - bw - 1, y(base[i]), bw, ih + mt - y(base[i]), 4), fill: 'var(--s-base)'}, svg);
+    sv('path', {d: barPath(cx + 1, y(scen[i]), bw, ih + mt - y(scen[i]), 4), fill: 'var(--s-scen)'}, svg);
+    const t = sv('text', {x: cx, y: H - 8, 'text-anchor': 'middle'}, svg); t.textContent = W < 480 ? MONTHS[i][0] : MONTHS[i];
+    const hit = sv('rect', {x: cx - step / 2, y: mt, width: step, height: ih, fill: 'transparent'}, svg);
+    hit.addEventListener('mousemove', ev => showTip(ev, `<div class="t">${MONTHS[i]} 2027</div><div class="r"><span>Baseline</span><span>${usd(base[i])}</span></div><div class="r"><span>Scenario</span><span>${usd(scen[i])}</span></div><div class="r"><span>Change</span><span>${sgn(scen[i] - base[i])}</span></div>`));
+    hit.addEventListener('mouseleave', hideTip);
+  }
+  sv('line', {x1: ml, x2: W - mr, y1: mt + ih, y2: mt + ih, class: 'axis'}, svg);
+}
+function drawCats(host, cats, base, scen) {
+  host.innerHTML = ''; const W = Math.max(300, host.clientWidth || 400), rowH = 44, ml = 112, mr = 70, mt = 4;
+  const H = mt + cats.length * rowH + 4;
+  const svg = sv('svg', {viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Annual cost by category, baseline vs scenario'}, host);
+  const max = niceMax(Math.max(1, ...cats.map(c => Math.max(base[c], scen[c])))), iw = W - ml - mr;
+  cats.forEach((c, i) => {
+    const y0 = mt + i * rowH; const t = sv('text', {x: ml - 8, y: y0 + 21, 'text-anchor': 'end'}, svg); t.textContent = c;
+    [['s-base', base[c], 0], ['s-scen', scen[c], 1]].forEach(([col, v, k]) => {
+      const yy = y0 + 6 + k * 16, w = v / max * iw;
+      sv('path', {d: hbarPath(ml, yy, Math.max(0, w), 13, 4), fill: `var(--${col})`}, svg);
+      const lt = sv('text', {x: ml + Math.max(0, w) + 6, y: yy + 11}, svg); lt.textContent = usdK(v);
+    });
+    const hit = sv('rect', {x: 0, y: y0, width: W, height: rowH, fill: 'transparent'}, svg);
+    hit.addEventListener('mousemove', ev => showTip(ev, `<div class="t">${c}</div><div class="r"><span>Baseline</span><span>${usd(base[c])}</span></div><div class="r"><span>Scenario</span><span>${usd(scen[c])}</span></div><div class="r"><span>Change</span><span>${sgn(scen[c] - base[c])}</span></div>`));
+    hit.addEventListener('mouseleave', hideTip);
+  });
+  sv('line', {x1: ml, x2: ml, y1: mt, y2: H - 4, class: 'axis'}, svg);
+}
+
+/* ---------- render ---------- */
+let BASE, SCEN;
+function recompute() { BASE = run({}); SCEN = runEff(S.assign); }
+function nMoved() { return Object.keys(S.assign).filter(k => S.assign[k] && S.assign[k] !== AMAP[k].loc).length; }
+function renderHeader() {
+  const n = nMoved(); const h = document.getElementById('hdrStatus');
+  const nr = Object.keys(S.assign).filter(k => REM.has(S.assign[k])).length, nm = n - nr;
+  h.className = 'pill ' + (n ? 'scen' : 'base'); h.textContent = n ? 'Scenario: ' + [nm ? `${nm} moved` : '', nr ? `${nr} removed` : ''].filter(Boolean).join(', ') : 'Baseline only';
+  ['btnReset', 'btnReset2'].forEach(id => document.getElementById(id).disabled = !n && !Object.keys(S.volOv).length);
+}
+function kpi(cls, eb, v, d) { const k = el('div', {class: 'kpi ' + (cls || '')}); k.append(el('span', {class: 'eyebrow', text: eb})); const vv = el('div', {class: 'v'}); vv.innerHTML = v; k.append(vv); const dd = el('div', {class: 'd'}); dd.innerHTML = d; k.append(dd); return k; }
+function renderOverview() {
+  const bc = totals(BASE, 'charge'), sc = totals(SCEN, 'charge'), bo = totals(BASE, 'op'), so = totals(SCEN, 'op');
+  const k = document.getElementById('kpis'); k.innerHTML = '';
+  const dch = sc.total - bc.total, dop = so.total - bo.total;
+  const cen = r => isCentral(r.loc);
+  const bcen = totals(BASE, 'charge', cen).total, scen_ = totals(SCEN, 'charge', cen).total;
+  k.append(kpi('lead', 'Baseline 2027 · location charges', usdK(bc.total), `Operating cost ${usdK(bo.total)}`));
+  k.append(kpi('', 'Scenario · location charges', usdK(sc.total), `<span class="${dcls(dch)}">${sgnK(dch)}</span> vs. baseline (${bc.total ? (dch / bc.total * 100).toFixed(1) : 0}%)`));
+  k.append(kpi('', 'Central (355CD + 355) charges', `<span class="${dcls(scen_ - bcen)}">${sgnK(scen_ - bcen)}</span>`, `${usdK(bcen)} baseline → ${usdK(scen_)}`));
+  k.append(kpi('', 'Store charges', `<span class="${dcls(dch - (scen_ - bcen))}">${sgnK(dch - (scen_ - bcen))}</span>`, `${usdK(bc.total - bcen)} baseline → ${usdK(sc.total - scen_)}`));
+  k.append(kpi('', 'Region 5 operating cost change', `<span class="${dcls(dop)}">${sgnK(dop)}</span>`, Math.abs(dop) < 500 ? 'Moves shift charges; real spend is unchanged.' : 'Real change from removals and mileage shifts.'));
+  const rem = removalSummary();
+  if (rem.n) k.append(kpi('', 'Company savings from terminations', `<span class="${rem.save > 0.5 ? 'down' : ''}">${usdK(rem.save)}</span>`, `Maintenance, depreciation and lease that stop in 2027. ${rem.nT} terminated, ${rem.nO} relocated out (${usdK(rem.out)} moves to other regions).`));
+  const view = S.view; const B = view === 'op' ? bo : bc, Sx = view === 'op' ? so : sc;
+  document.getElementById('monthLede').textContent = `${view === 'op' ? 'Company operating cost' : 'Location charges'}: baseline ${usd(B.total)}, scenario ${usd(Sx.total)}. Fuel falls through the year as the 2027 rate drops from $${S.p.fuelRate[0].toFixed(2)} to $${S.p.fuelRate[11].toFixed(2)}.`;
+  drawMonthly(document.getElementById('chMonth'), B.byM, Sx.byM);
+  drawCats(document.getElementById('chCat'), view === 'op' ? CATS_OP : CATS_CH, B.byC, Sx.byC);
+  // location table
+  const t = document.getElementById('tLoc'); t.innerHTML = '';
+  const cats = CATS_CH;
+  t.innerHTML = `<thead><tr><th>Location</th><th>Rules</th><th class="n">Assets</th>${cats.map(c => `<th class="n">${c}</th>`).join('')}<th class="n">Baseline charges</th><th class="n">Scenario charges</th><th class="n">Change</th><th class="n">Operating cost (scenario)</th></tr></thead>`;
+  const tb = el('tbody'); let tot = {b: 0, s: 0, o: 0, n: 0, n2: 0, c: {}};
+  cats.forEach(c => tot.c[c] = 0);
+  for (const l of LOCS) {
+    const fb = r => r.loc === l.id; const b = totals(BASE, 'charge', fb), s = totals(SCEN, 'charge', fb), o = totals(SCEN, 'op', fb);
+    const n = BASE.rows.filter(fb).length, n2 = SCEN.rows.filter(fb).length; const d = s.total - b.total;
+    const tr = el('tr'); if (n !== n2) tr.className = 'moved';
+    tr.innerHTML = `<td><b>${esc(l.id)}</b> ${esc(l.name)}</td><td><span class="chip ${l.kind === 'Central' ? 'c' : 's'}">${l.kind === 'Central' ? 'Central' : 'Store'}</span></td><td class="n">${n === n2 ? n : n + ' → ' + n2}</td>${cats.map(c => `<td class="n">${s.byC[c] ? usd(s.byC[c]) : '–'}</td>`).join('')}<td class="n">${usd(b.total)}</td><td class="n">${usd(s.total)}</td><td class="n ${dcls(d)}">${sgn(d)}</td><td class="n">${usd(o.total)}</td>`;
+    tb.append(tr); tot.b += b.total; tot.s += s.total; tot.o += o.total; tot.n += n; tot.n2 += n2; cats.forEach(c => tot.c[c] += s.byC[c]);
+  }
+  const tr = el('tr', {class: 'tot'}); tr.innerHTML = `<td>Region 5 total</td><td></td><td class="n">${tot.n2}</td>${cats.map(c => `<td class="n">${usd(tot.c[c])}</td>`).join('')}<td class="n">${usd(tot.b)}</td><td class="n">${usd(tot.s)}</td><td class="n ${dcls(tot.s - tot.b)}">${sgn(tot.s - tot.b)}</td><td class="n">${usd(tot.o)}</td>`;
+  tb.append(tr); t.append(tb);
+  t.insertAdjacentHTML('beforeend', '');
+  const cap = el('caption'); cap.style.cssText = 'caption-side:bottom;text-align:left;padding:8px 10px;color:var(--muted);font-size:12px'; cap.textContent = 'Category columns show scenario charges.'; t.prepend(cap);
+}
+function removalSummary() {
+  let n = 0, nT = 0, nO = 0, save = 0, region = 0, out = 0;
+  for (const id in S.assign) { const d = S.assign[id]; if (!REM.has(d)) continue; n++; const k = ASSETS.findIndex(a => a.id === id); const rb = BASE.rows[k], rs = SCEN.rows[k];
+    const fixed = ['Maintenance', 'Depreciation', 'Lease'].reduce((s, c) => s + sum12(rb.op[c]) - sum12(rs.op[c]), 0);
+    region += assetTotal(rb, 'op') - assetTotal(rs, 'op'); if (d === 'TERM') { nT++; save += fixed; } else { nO++; out += fixed; } }
+  return {n, nT, nO, save, region, out};
+}
+function remainingBook(a, eff) { if (a.own !== 'Owned' || !a.dep) return 0; const d = new Date(a.isd + 'T00:00:00'); const k = (2027 - d.getFullYear()) * 12 + (eff + 1 - (d.getMonth() + 1)) + 1; return Math.max(0, a.term - k + 1) * a.dep; }
+function renderMoves() {
+  const box = document.getElementById('movesList'); box.innerHTML = '';
+  const ids = Object.keys(S.assign).filter(k => S.assign[k] && S.assign[k] !== AMAP[k].loc);
+  if (!ids.length) { box.append(el('div', {class: 'empty', text: 'No assets moved yet. Choose a new location, Terminate or Relocate out of Region 5 in the Assets table below; the baseline stays as it is.'})); return; }
+  const warn = [];
+  for (const l in SCEN.unalloc) warn.push(`${f0.format(SCEN.unalloc[l])} miles at ${l} have no truck left to drive them and are left out of the forecast.`);
+  for (const l in SCEN.lpLost) warn.push(`${f0.format(SCEN.lpLost[l])} propane gallons at ${l} have no forklift left and are left out.`);
+  if (warn.length) box.append(el('div', {class: 'empty', text: warn.join(' ')}));
+  for (const id of ids) {
+    const a = AMAP[id], dest = S.assign[id], k = ASSETS.findIndex(x => x.id === id); const rb = BASE.rows[k], rs = SCEN.rows[k]; const eff = S.eff[id] || 0;
+    const m = el('div', {class: 'move'}); const sp = el('span'); sp.style.cssText = 'flex:1 1 320px;min-width:0';
+    if (REM.has(dest)) {
+      const fixed = ['Maintenance', 'Depreciation', 'Lease'].reduce((s, c) => s + sum12(rb.op[c]) - sum12(rs.op[c]), 0);
+      const book = remainingBook(a, eff);
+      const when = eff ? ` from ${MONTHS[eff]}` : '';
+      const detail = dest === 'TERM'
+        ? `Saves the company <b>${usd(fixed)}</b> in maintenance, depreciation and lease in 2027${when}. ${a.cls === 'Truck' ? 'Its miles and fuel pass to the remaining trucks at ' + a.loc + '. ' : a.cls === 'Forklift' ? 'Its propane passes to the remaining forklifts at ' + a.loc + '. ' : ''}${a.own === 'Leased' ? 'Lease payments stop; early-return fees are not modeled.' : book > 0 ? `Remaining book value at removal about <b>${usd(book)}</b> (one-time write-off or sale offset, not in the forecast).` : 'Fully depreciated.'}`
+        : `Removes <b>${usd(fixed)}</b> in maintenance, depreciation and lease from Region 5${when}; that cost continues in the receiving region, so the company saves nothing. ${a.cls === 'Truck' ? 'Its miles stay in Region 5 with the remaining trucks at ' + a.loc + '.' : ''}`;
+      sp.innerHTML = `<b>${esc(id)}</b> ${esc(a.type)} · ${esc(a.loc)} → <b>${dest === 'TERM' ? 'Terminate' : 'Relocate out'}</b><br>${detail}`;
+    } else {
+      const d = assetTotal(rs, 'charge') - assetTotal(rb, 'charge');
+      sp.innerHTML = `<b>${esc(id)}</b> ${esc(a.type)} · ${esc(a.loc)} → <b>${esc(dest)}</b> <span class="num">(${sgn(d)} on this asset)</span>`;
+    }
+    const ms = el('select', {id: 'eff-' + id, 'aria-label': 'Effective month for ' + id}); MONTHS.forEach((mn, i) => ms.append(el('option', {value: i, text: 'From ' + mn})));
+    ms.value = eff; ms.style.cssText = 'padding:3px 6px;border:1px solid var(--line-strong);border-radius:6px;background:var(--panel);color:var(--fg)';
+    ms.addEventListener('change', () => { S.eff[id] = +ms.value; changed('Effective month updated'); });
+    const bt = el('button', {class: 'btn small', type: 'button', text: 'Undo'}); bt.addEventListener('click', () => { delete S.assign[id]; delete S.eff[id]; changed('Change undone'); });
+    const ctl = el('span', {style: 'display:flex;gap:6px;align-items:center'}); ctl.append(ms, bt);
+    m.append(sp, ctl); box.append(m);
+  }
+}
+function renderVol() {
+  const t = document.getElementById('tVol'); document.getElementById('vptTxt').textContent = f0.format(S.p.vpt);
+  t.innerHTML = `<thead><tr><th>Store</th><th class="n">355CD deliveries / yr</th><th class="n">Trucks moved in from 355CD</th><th class="n">Auto</th><th class="n">Returned (override)</th><th class="n">Miles shifted</th></tr></thead>`;
+  const tb = el('tbody');
+  for (const s of Object.keys(DATA.served).sort((x, y) => DATA.served[y] - DATA.served[x])) {
+    const v = SCEN.vol[s]; const tr = el('tr'); if (v.v > 0) tr.className = 'moved';
+    tr.innerHTML = `<td><b>${s}</b> ${esc(LOC[s].name)}</td><td class="n">${f0.format(DATA.served[s])}</td><td class="n">${v.trucks}</td><td class="n">${f0.format(v.auto)}</td><td class="n vol"></td><td class="n">${f0.format(v.v * DATA.metrics[s].mpd * (1 + S.p.mileGrowth / 100))}</td>`;
+    const inp = el('input', {type: 'number', min: 0, max: Math.round(DATA.served[s]), step: 1, id: 'vol-' + s, 'aria-label': 'Deliveries returned to ' + s, placeholder: 'auto'});
+    if (v.ov) inp.value = Math.round(v.v);
+    inp.addEventListener('change', () => { if (inp.value === '') delete S.volOv[s]; else S.volOv[s] = +inp.value; changed(); });
+    tr.querySelector('.vol').append(inp); tb.append(tr);
+  }
+  const other = el('tr'); other.innerHTML = `<td colspan="6" style="color:var(--muted);white-space:normal">041 Laredo, 088 Del Rio and 097 Eagle Pass get no 355CD deliveries, so a truck moved there brings no volume.</td>`; tb.append(other);
+  t.append(tb);
+}
+function fillLocSelect(sel, withAll) { const cur = sel.value; sel.innerHTML = ''; if (withAll) sel.append(el('option', {value: '', text: 'All locations'})); LOCS.forEach(l => sel.append(el('option', {value: l.id, text: locLabel(l.id)}))); sel.value = cur; }
+function renderAssets() {
+  const t = document.getElementById('tAssets'); const fl = document.getElementById('fLoc').value, fc = document.getElementById('fCls').value, q = document.getElementById('fQ').value.trim().toLowerCase(), fm = document.getElementById('fMoved').value;
+  t.innerHTML = `<thead><tr><th>Asset</th><th>Class</th><th>Owned</th><th>Current</th><th>Assign to</th><th class="n">Miles / yr</th><th class="n">Baseline charges</th><th class="n">Scenario charges</th><th class="n">Change</th><th>Notes</th></tr></thead>`;
+  const tb = el('tbody'); let cnt = 0;
+  SCEN.rows.forEach((rs, i) => {
+    const a = rs.a, rb = BASE.rows[i]; const moved = (S.assign[a.id] || a.loc) !== a.loc;
+    if (fl && a.loc !== fl) return; if (fc && a.cls !== fc) return; if (fm && !moved) return;
+    if (q && !(a.id.toLowerCase().includes(q) || a.type.toLowerCase().includes(q))) return;
+    cnt++;
+    const b = assetTotal(rb, 'charge'), s = assetTotal(rs, 'charge'), d = s - b;
+    const tr = el('tr'); if (moved) tr.className = 'moved';
+    tr.innerHTML = `<td><b>${esc(a.id)}</b><span class="sub2">${esc(a.type)}</span></td><td>${a.cls}</td><td>${a.own}</td><td>${esc(a.loc)}</td><td class="sel"></td><td class="n">${a.cls === 'Truck' ? f0.format(rs.miles) + (moved || Math.abs(rs.miles - rb.miles) > 1 ? `<span class="sub2">base ${f0.format(rb.miles)}</span>` : '') : '–'}</td><td class="n">${usd(b)}</td><td class="n">${usd(s)}</td><td class="n ${dcls(d)}">${sgn(d)}</td><td>${a.flags.length ? `<span class="chip w" title="${esc(a.flags.join('; '))}">${a.flags.length} note${a.flags.length > 1 ? 's' : ''}</span>` : ''}</td>`;
+    const sel = el('select', {id: 'as-' + a.id, 'aria-label': 'Assign ' + a.id + ' to'});
+    LOCS.forEach(l => sel.append(el('option', {value: l.id, text: l.id === a.loc ? l.id + ' (current)' : locLabel(l.id)})));
+    ['TERM', 'OUT'].forEach(v => sel.append(el('option', {value: v, text: v === 'TERM' ? 'Terminate (sell / return lease)' : 'Relocate out of Region 5'})));
+    sel.value = S.assign[a.id] || a.loc;
+    sel.addEventListener('change', () => { if (sel.value === a.loc) { delete S.assign[a.id]; delete S.eff[a.id]; } else S.assign[a.id] = sel.value; changed(sel.value === a.loc ? 'Move undone' : REM.has(sel.value) ? `${a.id} ${sel.value === 'TERM' ? 'terminated' : 'relocated out of Region 5'}` : `${a.id} moved to ${sel.value}`); });
+    tr.querySelector('.sel').append(sel); tb.append(tr);
+  });
+  if (!cnt) tb.innerHTML = '<tr><td colspan="10" style="color:var(--muted)">No assets match these filters.</td></tr>';
+  t.append(tb);
+}
+function fmtCell(v, kind) { if (v === null || v === undefined || Number.isNaN(v)) return '–'; switch (kind) { case '$': return usd(v); case '$2': return usd2(v); case '%': return pct(v); case '1': return f1.format(v); default: return f0.format(v); } }
+function renderUtil() {
+  const U = utilization(BASE, SCEN); const box = document.getElementById('ucards'); box.innerHTML = '';
+  const list = U.filter(u => S.ufilter !== 'changed' || u.changed).sort((a, b) => (b.changed - a.changed) || (a.id === '355CD' ? -1 : b.id === '355CD' ? 1 : a.id.localeCompare(b.id)));
+  if (!list.length) { box.append(el('div', {class: 'empty', text: 'No location has changed yet. Move a truck on the Reassign tab to see its effect here.'})); return; }
+  for (const u of list) {
+    const c = el('div', {class: 'ucard' + (u.changed ? ' changed' : '')});
+    const hd = el('div', {class: 'hd'}); hd.innerHTML = `<h3>${u.id} ${esc(LOC[u.id].name)}</h3><span class="chip ${u.changed ? 'm' : 's'}">${u.N === u.N2 ? u.N + ' trucks' : u.N + ' → ' + u.N2 + ' trucks'}</span>`;
+    c.append(hd);
+    const rows = [['Deliveries / yr', u.D, u.D2, '0'], ['Deliveries per truck', u.dpt, u.dpt2, '0'], ['Avg daily deliveries', u.dd, u.dd2, '1'], ['Trips / yr', u.trips, u.trips2, '0'], ['Miles / yr', u.mi, u.mi2, '0'],
+      ['Time-away utilization', u.ta, u.ta2, '%'], ['Asset days active', u.da, u.da2, '%'], ['Flat-rate charges / yr', u.fc, u.fc2, '$'], ['Fuel / yr (2026 basis)', u.fuel, u.fuel2, '$'], ['Cost per delivery', u.cpd, u.cpd2, '$2'], ['Cost per mile', u.cpm, u.cpm2, '$2']];
+    const h = el('div', {class: 'mrow h'}); h.innerHTML = '<span>Metric</span><span>Baseline</span><span>Scenario</span><span>Change</span>'; c.append(h);
+    for (const [lab, b, s, k] of rows) {
+      const d = s - b; const r = el('div', {class: 'mrow'});
+      const dk = k === '%' ? (Math.abs(d) < 0.0005 ? '–' : (d > 0 ? '+' : '') + (d * 100).toFixed(1) + ' pts') : (Math.abs(d) < (k === '$2' ? 0.005 : 0.5) ? '–' : (d > 0 ? '+' : '') + fmtCell(d, k));
+      r.innerHTML = `<span>${lab}</span><span>${fmtCell(b, k)}</span><span>${fmtCell(s, k)}</span><span>${dk}</span>`; c.append(r);
+    }
+    const m = el('div'); m.innerHTML = `<div class="eyebrow" style="margin-bottom:4px">Time-away utilization</div>`;
+    const mt = el('div', {class: 'meter'}); mt.innerHTML = `<i style="width:${Math.min(100, u.ta * 100)}%;background:var(--s-base);opacity:.55"></i><i style="width:${Math.min(100, (u.ta2 || 0) * 100)}%;height:4px;top:2px;background:var(--s-scen)"></i>`;
+    m.append(mt); c.append(m);
+    const notes = [];
+    if (u.id !== '355CD' && u.milech && Math.abs(u.milech) > 0.5) notes.push(`Mileage charge change: <b>${sgn(u.milech)}</b> / yr at $${S.p.mileRate.toFixed(3)} per mile (not in cost per delivery).`);
+    if (u.id === '355CD') notes.push(`Weight utilization ${pct(u.M.weight)} and ${u.M.delPerTrip.toFixed(2)} deliveries per trip are held constant.`);
+    else if (!DATA.served[u.id]) notes.push('No 355CD deliveries to this store, so an added truck brings no new volume.');
+    else notes.push(`355CD delivers ${f0.format(DATA.served[u.id])} a year here. Weight utilization ${pct(u.M.weight)} and ${u.M.delPerTrip.toFixed(2)} deliveries per trip are held constant.`);
+    if (u.N2 === 0 && u.D2 > 0) notes.push('<span class="up">No trucks remain for this volume.</span>');
+    const n = el('div', {class: 'note'}); n.innerHTML = notes.join('<br>'); c.append(n);
+    box.append(c);
+  }
+}
+function renderForklift() {
+  const FK = DATA.forklift, avg = FK.companyHpd; const t = document.getElementById('tFk');
+  const cnt = (res, id) => res.rows.filter(r => r.a.cls === 'Forklift' && r.loc === id).length;
+  const idx = h => (h / avg - 1);
+  const chip = h => { if (h == null) return ''; const d = idx(h); return d >= 0.1 ? '<span class="chip c">Above avg</span>' : d <= -0.1 ? '<span class="chip w">Below avg</span>' : '<span class="chip s">Near avg</span>'; };
+  const dpt = v => (v > 0 ? '+' : '') + (v * 100).toFixed(0) + '%';
+  t.innerHTML = `<thead><tr><th>Location</th><th class="n">Forklifts</th><th class="n">Hrs / day per unit</th><th class="n">vs. company avg (${avg.toFixed(2)})</th><th></th><th class="n">Yard tickets / day</th><th class="n">Tickets / unit / day</th></tr></thead>`;
+  const tb = el('tbody');
+  const vOut = Object.values(SCEN.vol).reduce((s, v) => s + v.v, 0); const chg = x => cnt(BASE, x) !== cnt(SCEN, x) || (x === '355CD' && vOut > 0.5);
+  const ids = LOCS.map(l => l.id).sort((a, b) => { const ca = chg(a), cb = chg(b); return (cb - ca) || LOCS.findIndex(l => l.id === a) - LOCS.findIndex(l => l.id === b); });
+  for (const id of ids) {
+    const n = cnt(BASE, id), n2 = cnt(SCEN, id), m = FK.locs[id];
+    const D = id === '355CD' ? DATA.metrics['355CD'].deliveries : 0, D2 = id === '355CD' ? Math.max(0, D - Object.values(SCEN.vol).reduce((s, v) => s + v.v, 0)) : 0;
+    const ch = n !== n2 || Math.abs(D2 - D) > 0.5; const tr = el('tr'); if (ch) tr.className = 'moved';
+    if (!m) { tr.innerHTML = `<td><b>${id}</b> ${esc(LOC[id].name)}</td><td class="n">${n === n2 ? n : n + ' → ' + n2}</td><td class="n" colspan="5" style="text-align:left;color:var(--muted)">No hours or yard-ticket data for this location.</td>`; tb.append(tr); continue; }
+    const H = m.hpd * m.n, H2 = id === '355CD' && D ? H * D2 / D : H, h2 = n2 ? H2 / n2 : null;
+    const tpu = m.tpd != null ? m.tpd / m.n : null, tpu2 = m.tpd != null && n2 ? m.tpd / n2 : null;
+    const pair = (a, b, f) => ch ? `${f(a)} → <b>${b == null ? '–' : f(b)}</b>` : f(a);
+    tr.innerHTML = `<td><b>${id}</b> ${esc(LOC[id].name)}</td><td class="n">${n === n2 ? n : n + ' → ' + n2}</td><td class="n">${pair(m.hpd, h2, v => v.toFixed(2))}</td><td class="n">${pair(idx(m.hpd), h2 == null ? null : idx(h2), dpt)}</td><td>${chip(ch ? h2 : m.hpd)}</td>${id === '355CD' ? `<td class="n">${pair(D / FK.bizDays, D2 / FK.bizDays, v => v.toFixed(1))} <span class="sub2">deliveries / day (no yard tickets)</span></td><td class="n">${pair(D / FK.bizDays / n, n2 ? D2 / FK.bizDays / n2 : null, v => v.toFixed(1))} <span class="sub2">deliveries / unit / day</span></td>` : `<td class="n">${m.tpd != null ? m.tpd.toFixed(1) : '–'}</td><td class="n">${tpu != null ? pair(tpu, tpu2, v => v.toFixed(1)) : '–'}</td>`}`;
+    tb.append(tr);
+  }
+  t.append(tb);
+}
+function renderDetail() {
+  const cat = document.getElementById('dCat'); const cats = S.view === 'op' ? CATS_OP : CATS_CH; const curC = cat.value;
+  cat.innerHTML = ''; cat.append(el('option', {value: '', text: 'All categories'})); cats.forEach(c => cat.append(el('option', {value: c, text: c}))); cat.value = cats.includes(curC) ? curC : '';
+  const key = S.view === 'op' ? 'op' : 'ch'; const cs = cat.value ? [cat.value] : cats;
+  const val = (res, loc) => { const m = new Array(12).fill(0); for (const r of res.rows) for (const pt of r.parts) { if (pt.loc !== loc) continue; for (const c of cs) for (let i = 0; i < 12; i++) m[i] += pt[key][c][i]; } return m; };
+  const caseName = {base: 'Baseline', scen: 'Scenario', delta: 'Scenario minus baseline'}[S.dcase];
+  document.getElementById('detLede').textContent = `${caseName} · ${S.view === 'op' ? 'company operating cost' : 'location charges'} · ${cat.value || 'all categories'}.`;
+  const t = document.getElementById('tMonth'); t.innerHTML = `<thead><tr><th>Location</th>${MONTHS.map(m => `<th class="n">${m}</th>`).join('')}<th class="n">2027</th></tr></thead>`;
+  const tb = el('tbody'); const tot = new Array(12).fill(0); const csv = [['Location', ...MONTHS, '2027']];
+  for (const l of LOCS) {
+    const b = val(BASE, l.id), s = val(SCEN, l.id); const v = S.dcase === 'base' ? b : S.dcase === 'scen' ? s : s.map((x, i) => x - b[i]);
+    v.forEach((x, i) => tot[i] += x); const T = sum12(v);
+    const tr = el('tr'); tr.innerHTML = `<td><b>${l.id}</b> ${esc(l.name)}</td>${v.map(x => `<td class="n ${S.dcase === 'delta' ? dcls(x) : ''}">${S.dcase === 'delta' ? sgn(x) : usd(x)}</td>`).join('')}<td class="n"><b>${S.dcase === 'delta' ? sgn(T) : usd(T)}</b></td>`;
+    tb.append(tr); csv.push([locLabel(l.id), ...v.map(x => x.toFixed(2)), T.toFixed(2)]);
+  }
+  const T = sum12(tot); const tr = el('tr', {class: 'tot'}); tr.innerHTML = `<td>Region 5</td>${tot.map(x => `<td class="n">${S.dcase === 'delta' ? sgn(x) : usd(x)}</td>`).join('')}<td class="n">${S.dcase === 'delta' ? sgn(T) : usd(T)}</td>`;
+  tb.append(tr); t.append(tb); csv.push(['Region 5', ...tot.map(x => x.toFixed(2)), T.toFixed(2)]); t._csv = csv;
+  // asset detail
+  const al = document.getElementById('aLoc').value, q = document.getElementById('aQ').value.trim().toLowerCase();
+  const ta = document.getElementById('tAssetDet'); ta.innerHTML = `<thead><tr><th>Asset</th><th>Location</th><th class="n">Miles</th><th class="n">Fuel gal</th>${cats.map(c => `<th class="n">${c}</th>`).join('')}<th class="n">Total</th></tr></thead>`;
+  const tb2 = el('tbody'); const csv2 = [['Asset', 'Type', 'Class', 'Location', 'Miles', 'Fuel gallons', 'Propane gallons', ...cats, 'Total']]; const ct = {}; cats.forEach(c => ct[c] = 0); let gt = 0;
+  SCEN.rows.forEach((rs, i) => {
+    const rb = BASE.rows[i], a = rs.a; const loc = S.dcase === 'base' ? rb.loc : rs.loc;
+    if (al && loc !== al) return; if (q && !(a.id.toLowerCase().includes(q) || a.type.toLowerCase().includes(q))) return;
+    const vals = cats.map(c => { const b = sum12(rb[key][c]), s = sum12(rs[key][c]); return S.dcase === 'base' ? b : S.dcase === 'scen' ? s : s - b; });
+    const tt = vals.reduce((x, y) => x + y, 0); cats.forEach((c, k) => ct[c] += vals[k]); gt += tt;
+    const r = S.dcase === 'base' ? rb : rs; const fmt = S.dcase === 'delta' ? sgn : usd;
+    const tr = el('tr'); if (rs.loc !== a.loc) tr.className = 'moved';
+    tr.innerHTML = `<td><b>${esc(a.id)}</b><span class="sub2">${esc(a.type)}</span></td><td>${locShort(loc)}${rs.loc !== a.loc && S.dcase !== 'base' ? `<span class="sub2">from ${a.loc}</span>` : ''}</td><td class="n">${a.cls === 'Truck' ? f0.format(r.miles) : '–'}</td><td class="n">${r.gal ? f0.format(r.gal) : r.lp ? f0.format(r.lp) + ' LP' : '–'}</td>${vals.map(v => `<td class="n ${S.dcase === 'delta' ? dcls(v) : ''}">${Math.abs(v) < 0.5 ? '–' : fmt(v)}</td>`).join('')}<td class="n"><b>${fmt(tt)}</b></td>`;
+    tb2.append(tr); csv2.push([a.id, a.type, a.cls, locShort(loc), r.miles.toFixed(0), r.gal.toFixed(1), r.lp.toFixed(1), ...vals.map(v => v.toFixed(2)), tt.toFixed(2)]);
+  });
+  const fmt = S.dcase === 'delta' ? sgn : usd; const trt = el('tr', {class: 'tot'}); trt.innerHTML = `<td>Total</td><td></td><td></td><td></td>${cats.map(c => `<td class="n">${fmt(ct[c])}</td>`).join('')}<td class="n">${fmt(gt)}</td>`; tb2.append(trt);
+  ta.append(tb2); ta._csv = csv2;
+}
+function renderAssumptions() {
+  const p = S.p;
+  const setv = (id, v) => { const e = document.getElementById(id); if (document.activeElement !== e) e.value = v; };
+  setv('iGrowth', p.mileGrowth); setv('iMaint', p.maintTrend); setv('iMile', p.mileRate); setv('iVpt', p.vpt);
+  const grid = (id, arr, key) => { const g = document.getElementById(id); if (g.childElementCount) { arr.forEach((v, i) => { const e = g.querySelectorAll('input')[i]; if (document.activeElement !== e) e.value = v; }); return; }
+    arr.forEach((v, i) => { const lab = el('label', {text: MONTHS[i]}); const inp = el('input', {type: 'number', step: '0.001', id: key + i, value: v}); inp.addEventListener('change', () => { const x = parseFloat(inp.value); if (!isNaN(x) && x >= 0) { S.p[key][i] = x; changed('Rate updated'); } }); lab.append(inp); g.append(lab); }); };
+  grid('gFuel', p.fuelRate, 'fuelRate'); grid('gLp', p.lpRate, 'lpRate');
+  const tf = document.getElementById('tFlat'); if (!tf.childElementCount) {
+    const used = [...new Set(ASSETS.map(a => a.type))].sort();
+    tf.innerHTML = '<thead><tr><th>Asset type</th><th class="n">In scope</th><th class="n">$/month</th></tr></thead>'; const tb = el('tbody');
+    used.forEach((ty, i) => { const tr = el('tr'); tr.innerHTML = `<td>${esc(ty)}</td><td class="n">${ASSETS.filter(a => a.type === ty).length}</td><td class="n"></td>`; const inp = el('input', {type: 'number', step: '0.01', id: 'flat' + i, 'aria-label': 'Flat rate ' + ty}); inp.style.cssText = 'width:96px;padding:4px 6px;border:1px solid var(--line-strong);border-radius:6px;background:var(--panel);text-align:right'; inp.value = p.flat[ty]; inp.dataset.t = ty; inp.addEventListener('change', () => { const x = parseFloat(inp.value); if (!isNaN(x) && x >= 0) { S.p.flat[ty] = x; changed('Flat rate updated'); } }); tr.lastChild.append(inp); tb.append(tr); });
+    tf.append(tb);
+  } else tf.querySelectorAll('input').forEach(i => { if (document.activeElement !== i) i.value = p.flat[i.dataset.t]; });
+  const tg = document.getElementById('tFlags'); if (!tg.childElementCount) {
+    tg.innerHTML = '<thead><tr><th>Asset</th><th>Location</th><th>Type</th><th>Note</th></tr></thead>'; const tb = el('tbody');
+    ASSETS.filter(a => a.flags.length).forEach(a => a.flags.forEach(f => { const tr = el('tr'); tr.innerHTML = `<td><b>${esc(a.id)}</b></td><td>${esc(a.loc)}</td><td>${esc(a.type)}</td><td style="white-space:normal">${esc(f)}</td>`; tb.append(tr); }));
+    tg.append(tb);
+  }
+}
+function syncSegs() { document.querySelectorAll('[data-seg]').forEach(g => { const k = g.dataset.seg; g.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(S[k] === b.dataset.val))); }); }
+function renderAll() { recompute(); renderHeader(); syncSegs(); renderOverview(); renderMoves(); renderVol(); renderAssets(); renderUtil(); renderForklift(); renderDetail(); renderAssumptions(); }
+let toastT; function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 1800); }
+function changed(msg) { save(); renderAll(); if (msg) toast(msg); }
+
+/* ---------- events ---------- */
+document.querySelectorAll('[data-seg]').forEach(g => g.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S[g.dataset.seg] = b.dataset.val; save(); renderAll(); }));
+const resetScenario = () => { S.assign = {}; S.volOv = {}; S.eff = {}; changed('Scenario cleared to baseline'); };
+if (OLD) { const bo = document.getElementById('btnOld'); bo.hidden = false; bo.addEventListener('click', () => { loadState(JSON.parse(JSON.stringify(OLD))); S.restored = true; changed('Earlier moves restored'); }); }
+document.getElementById('btnCopyScen').addEventListener('click', () => {
+  const ids = Object.keys(S.assign).filter(k => S.assign[k] && S.assign[k] !== AMAP[k].loc);
+  const lines = ['Asset,From,To,Start month', ...ids.map(id => [id, AMAP[id].loc, S.assign[id] === 'TERM' ? 'Terminate' : S.assign[id] === 'OUT' ? 'Relocate out' : S.assign[id], MONTHS[S.eff[id] || 0]].join(','))];
+  for (const s in S.volOv) lines.push(`Volume override,${s},${S.volOv[s]},`);
+  const txt = lines.join('\n');
+  try { navigator.clipboard.writeText(txt).then(() => toast(`${ids.length} changes copied`), () => toast('Copy was blocked; the list is shown below to copy by hand')); } catch (e) { toast('Copy was blocked'); }
+  const box = document.getElementById('scenText'); box.value = txt; box.hidden = false; box.select();
+});
+document.getElementById('btnPreset').addEventListener('click', () => { const pr = PRESET(); S.assign = pr.assign; S.eff = pr.eff; S.volOv = {}; changed('Starting scenario loaded'); });
+document.getElementById('btnReset').addEventListener('click', resetScenario);
+document.getElementById('btnReset2').addEventListener('click', resetScenario);
+document.getElementById('btnResetA').addEventListener('click', () => { S.p = DEF(); document.getElementById('gFuel').innerHTML = ''; document.getElementById('gLp').innerHTML = ''; document.getElementById('tFlat').innerHTML = ''; changed('Default inputs restored'); });
+[['iGrowth', 'mileGrowth'], ['iMaint', 'maintTrend'], ['iMile', 'mileRate'], ['iVpt', 'vpt']].forEach(([id, k]) => document.getElementById(id).addEventListener('change', e => { const x = parseFloat(e.target.value); if (!isNaN(x)) { S.p[k] = k === 'vpt' ? Math.max(0, Math.round(x)) : x; changed('Input updated'); } }));
+['fLoc', 'fCls', 'fMoved'].forEach(id => document.getElementById(id).addEventListener('change', renderAssets));
+document.getElementById('fQ').addEventListener('input', renderAssets);
+document.getElementById('dCat').addEventListener('change', renderDetail);
+document.getElementById('aLoc').addEventListener('change', renderDetail);
+document.getElementById('aQ').addEventListener('input', renderDetail);
+function copyCsv(tableId) { const rows = document.getElementById(tableId)._csv || []; const txt = rows.map(r => r.map(c => /[",\n]/.test(c) ? '"' + String(c).replace(/"/g, '""') + '"' : c).join(',')).join('\n');
+  try { navigator.clipboard.writeText(txt).then(() => toast('Table copied as CSV'), () => toast('Copy was blocked; select the table to copy it instead')); } catch (e) { toast('Copy was blocked; select the table to copy it instead'); } }
+document.getElementById('copyMonth').addEventListener('click', () => copyCsv('tMonth'));
+document.getElementById('copyAsset').addEventListener('click', () => copyCsv('tAssetDet'));
+fillLocSelect(document.getElementById('fLoc'), true); fillLocSelect(document.getElementById('aLoc'), true);
+const VIEWS = ['overview', 'reassign', 'utilization', 'detail', 'assumptions'];
+function route() { const h = location.hash.replace('#', ''); const v = VIEWS.includes(h) ? h : 'overview'; VIEWS.forEach(x => document.getElementById('v-' + x).hidden = x !== v); document.querySelectorAll('#tabs a').forEach(a => a.toggleAttribute('aria-current', a.dataset.v === v) || (a.dataset.v === v && a.setAttribute('aria-current', 'page'))); document.querySelectorAll('#tabs a').forEach(a => { if (a.dataset.v === v) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); }); if (v === 'overview') renderOverview(); }
+addEventListener('hashchange', route);
+let rT; addEventListener('resize', () => { clearTimeout(rT); rT = setTimeout(renderOverview, 150); });
+renderAll(); route();
+</script>
