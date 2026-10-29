@@ -33,7 +33,7 @@
 body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:14px;line-height:1.45;margin:0}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--brand)}
 .gut{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.wrap{max-width:1360px;margin:0 auto}
+.wrap{max-width:1800px;margin:0 auto}
 .num,td.n,th.n{font-variant-numeric:tabular-nums}
 h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 button,select,input{font:inherit;color:inherit}
@@ -118,7 +118,11 @@ section.view{display:flex;flex-direction:column;gap:18px}
 /* tables */
 .tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
 table{border-collapse:collapse;width:100%;font-size:13px}
-th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th,td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{white-space:normal;vertical-align:bottom;line-height:1.25}
+#tLoc td:first-child,#tAssetDet td:first-child{white-space:normal;min-width:120px}
+#tLoc,#tMonth,#tAssetDet{font-size:12.5px}
+#tLoc th,#tLoc td,#tMonth th,#tMonth td{padding-left:6px;padding-right:6px}
 th{font-size:11.5px;font-weight:600;color:var(--muted);background:var(--panel-2);position:sticky;top:0;z-index:1}
 th.n,td.n{text-align:right}
 tbody tr:hover td{background:var(--panel-2)}
@@ -586,17 +590,17 @@ function renderOverview() {
   // location table
   const t = document.getElementById('tLoc'); t.innerHTML = '';
   const cats = CATS_CH;
-  t.innerHTML = `<thead><tr><th>Location</th><th>Rules</th><th class="n">Assets</th>${cats.map(c => `<th class="n">${c}</th>`).join('')}<th class="n">Baseline charges</th><th class="n">Scenario charges</th><th class="n">Change</th><th class="n">Operating cost (scenario)</th></tr></thead>`;
+  t.innerHTML = `<thead><tr><th>Location</th><th class="n">Assets</th>${cats.map(c => `<th class="n">${c}</th>`).join('')}<th class="n">Baseline charges</th><th class="n">Scenario charges</th><th class="n">Change</th><th class="n">Operating cost (scenario)</th></tr></thead>`;
   const tb = el('tbody'); let tot = {b: 0, s: 0, o: 0, n: 0, n2: 0, c: {}};
   cats.forEach(c => tot.c[c] = 0);
   for (const l of LOCS) {
     const fb = r => r.loc === l.id; const b = totals(BASE, 'charge', fb), s = totals(SCEN, 'charge', fb), o = totals(SCEN, 'op', fb);
     const n = BASE.rows.filter(fb).length, n2 = SCEN.rows.filter(fb).length; const d = s.total - b.total;
     const tr = el('tr'); if (n !== n2) tr.className = 'moved';
-    tr.innerHTML = `<td><b>${esc(l.id)}</b> ${esc(l.name)}</td><td><span class="chip ${l.kind === 'Central' ? 'c' : 's'}">${l.kind === 'Central' ? 'Central' : 'Store'}</span></td><td class="n">${n === n2 ? n : n + ' → ' + n2}</td>${cats.map(c => `<td class="n">${s.byC[c] ? usd(s.byC[c]) : '–'}</td>`).join('')}<td class="n">${usd(b.total)}</td><td class="n">${usd(s.total)}</td><td class="n ${dcls(d)}">${sgn(d)}</td><td class="n">${usd(o.total)}</td>`;
+    tr.innerHTML = `<td><b>${esc(l.id)}</b> ${esc(l.name)} <span class="chip ${l.kind === 'Central' ? 'c' : 's'}">${l.kind === 'Central' ? 'Central' : 'Store'}</span></td><td class="n">${n === n2 ? n : n + ' → ' + n2}</td>${cats.map(c => `<td class="n">${s.byC[c] ? usd(s.byC[c]) : '–'}</td>`).join('')}<td class="n">${usd(b.total)}</td><td class="n">${usd(s.total)}</td><td class="n ${dcls(d)}">${sgn(d)}</td><td class="n">${usd(o.total)}</td>`;
     tb.append(tr); tot.b += b.total; tot.s += s.total; tot.o += o.total; tot.n += n; tot.n2 += n2; cats.forEach(c => tot.c[c] += s.byC[c]);
   }
-  const tr = el('tr', {class: 'tot'}); tr.innerHTML = `<td>Region 5 total</td><td></td><td class="n">${tot.n2}</td>${cats.map(c => `<td class="n">${usd(tot.c[c])}</td>`).join('')}<td class="n">${usd(tot.b)}</td><td class="n">${usd(tot.s)}</td><td class="n ${dcls(tot.s - tot.b)}">${sgn(tot.s - tot.b)}</td><td class="n">${usd(tot.o)}</td>`;
+  const tr = el('tr', {class: 'tot'}); tr.innerHTML = `<td>Region 5 total</td><td class="n">${tot.n2}</td>${cats.map(c => `<td class="n">${usd(tot.c[c])}</td>`).join('')}<td class="n">${usd(tot.b)}</td><td class="n">${usd(tot.s)}</td><td class="n ${dcls(tot.s - tot.b)}">${sgn(tot.s - tot.b)}</td><td class="n">${usd(tot.o)}</td>`;
   tb.append(tr); t.append(tb);
   t.insertAdjacentHTML('beforeend', '');
   const cap = el('caption'); cap.style.cssText = 'caption-side:bottom;text-align:left;padding:8px 10px;color:var(--muted);font-size:12px'; cap.textContent = 'Category columns show scenario charges.'; t.prepend(cap);
