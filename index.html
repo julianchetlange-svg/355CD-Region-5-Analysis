@@ -170,6 +170,12 @@ td select{padding:4px 6px;border:1px solid var(--line-strong);border-radius:6px;
 .xbar b{color:var(--fg)}
 .xbar .st{font-size:12px;color:var(--muted)}
 .xbar .st.dirty{color:var(--up);font-weight:600}
+.caret{border:0;background:transparent;color:var(--muted);cursor:pointer;padding:0 6px 0 0;font-size:12px;line-height:1;display:inline-block;width:18px;text-align:left}
+.caret[aria-expanded="true"]{transform:rotate(90deg);transform-origin:5px 50%}
+@media (prefers-reduced-motion: no-preference){.caret{transition:transform .15s}}
+tr.subrow td{font-size:12.5px;color:var(--muted);background:var(--panel)}
+tr.subrow td:first-child{padding-left:34px}
+tr.tot .caret{color:var(--fg)}
 .toast{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:13px;z-index:60}
 @media (prefers-reduced-motion: no-preference){.ucard,.kpi{transition:border-color .2s}}
 </style>
@@ -292,7 +298,7 @@ td select{padding:4px 6px;border:1px solid var(--line-strong);border-radius:6px;
         <div class="seg" role="group" aria-label="Case" data-seg="dcase"><button type="button" data-val="base">Baseline</button><button type="button" data-val="scen">Scenario</button><button type="button" data-val="delta">Change</button></div>
         <div class="seg" role="group" aria-label="Cost view" data-seg="view"><button type="button" data-val="charge">Charges</button><button type="button" data-val="op">Operating</button></div>
       </div></div>
-    <div class="filters"><label>Cost category<select id="dCat"></select></label><button class="btn small" type="button" id="copyMonth">Copy table as CSV</button></div>
+    <div class="filters"><label>Cost category<select id="dCat"></select></label><button class="btn small" type="button" id="expAll">Expand all</button><button class="btn small" type="button" id="colAll">Collapse all</button><button class="btn small" type="button" id="copyMonth">Copy table as CSV</button></div>
     <div class="tbl-wrap"><table id="tMonth"></table></div>
   </div>
   <div class="panel">
@@ -727,19 +733,33 @@ function renderDetail() {
   const cat = document.getElementById('dCat'); const cats = S.view === 'op' ? CATS_OP : CATS_CH; const curC = cat.value;
   cat.innerHTML = ''; cat.append(el('option', {value: '', text: 'All categories'})); cats.forEach(c => cat.append(el('option', {value: c, text: c}))); cat.value = cats.includes(curC) ? curC : '';
   const key = S.view === 'op' ? 'op' : 'ch'; const cs = cat.value ? [cat.value] : cats;
-  const val = (res, loc) => { const m = new Array(12).fill(0); for (const r of res.rows) for (const pt of r.parts) { if (pt.loc !== loc) continue; for (const c of cs) for (let i = 0; i < 12; i++) m[i] += pt[key][c][i]; } return m; };
+  const valC = (res, loc, c) => { const m = new Array(12).fill(0); for (const r of res.rows) for (const pt of r.parts) { if (loc && pt.loc !== loc) continue; for (let i = 0; i < 12; i++) m[i] += pt[key][c][i]; } return m; };
+  const pick = (loc, c) => { const b = valC(BASE, loc, c), s = valC(SCEN, loc, c); return S.dcase === 'base' ? b : S.dcase === 'scen' ? s : s.map((x, i) => x - b[i]); };
   const caseName = {base: 'Baseline', scen: 'Scenario', delta: 'Scenario minus baseline'}[S.dcase];
-  document.getElementById('detLede').textContent = `${caseName} · ${S.view === 'op' ? 'company operating cost' : 'location charges'} · ${cat.value || 'all categories'}.`;
+  document.getElementById('detLede').textContent = `${caseName} · ${S.view === 'op' ? 'company operating cost' : 'location charges'} · ${cat.value || 'all categories'}. Click a location's arrow to see its cost categories.`;
+  S.exp = S.exp || {};
   const t = document.getElementById('tMonth'); t.innerHTML = `<thead><tr><th>Location</th>${MONTHS.map(m => `<th class="n">${m}</th>`).join('')}<th class="n">2027</th></tr></thead>`;
-  const tb = el('tbody'); const tot = new Array(12).fill(0); const csv = [['Location', ...MONTHS, '2027']];
-  for (const l of LOCS) {
-    const b = val(BASE, l.id), s = val(SCEN, l.id); const v = S.dcase === 'base' ? b : S.dcase === 'scen' ? s : s.map((x, i) => x - b[i]);
-    v.forEach((x, i) => tot[i] += x); const T = sum12(v);
-    const tr = el('tr'); tr.innerHTML = `<td><b>${l.id}</b> ${esc(l.name)}</td>${v.map(x => `<td class="n ${S.dcase === 'delta' ? dcls(x) : ''}">${S.dcase === 'delta' ? sgn(x) : usd(x)}</td>`).join('')}<td class="n"><b>${S.dcase === 'delta' ? sgn(T) : usd(T)}</b></td>`;
-    tb.append(tr); csv.push([locLabel(l.id), ...v.map(x => x.toFixed(2)), T.toFixed(2)]);
-  }
-  const T = sum12(tot); const tr = el('tr', {class: 'tot'}); tr.innerHTML = `<td>Region 5</td>${tot.map(x => `<td class="n">${S.dcase === 'delta' ? sgn(x) : usd(x)}</td>`).join('')}<td class="n">${S.dcase === 'delta' ? sgn(T) : usd(T)}</td>`;
-  tb.append(tr); t.append(tb); csv.push(['Region 5', ...tot.map(x => x.toFixed(2)), T.toFixed(2)]); t._csv = csv;
+  const tb = el('tbody'); const csv = [['Location', 'Cost category', ...MONTHS, '2027']];
+  const fmtv = x => S.dcase === 'delta' ? sgn(x) : usd(x), clsv = x => S.dcase === 'delta' ? dcls(x) : '';
+  const addGroup = (id, label, rowCls) => {
+    const parts = cs.map(c => [c, pick(id, c)]);
+    const v = new Array(12).fill(0); parts.forEach(([, a]) => a.forEach((x, i) => v[i] += x)); const T = sum12(v);
+    const open = !!S.exp[id || 'ALL'];
+    const tr = el('tr', {class: rowCls || ''});
+    tr.innerHTML = `<td><button class="caret" type="button" aria-expanded="${open}" aria-label="Show cost categories for ${esc(label)}">▸</button>${label}</td>${v.map(x => `<td class="n ${clsv(x)}">${fmtv(x)}</td>`).join('')}<td class="n"><b>${fmtv(T)}</b></td>`;
+    tr.querySelector('.caret').addEventListener('click', () => { S.exp[id || 'ALL'] = !open; save(); renderDetail(); });
+    tb.append(tr); csv.push([id ? locLabel(id) : 'Region 5', 'Total', ...v.map(x => x.toFixed(2)), T.toFixed(2)]);
+    for (const [c, a] of parts) {
+      const ct = sum12(a); if (a.every(x => Math.abs(x) < 0.5)) continue;
+      csv.push([id ? locLabel(id) : 'Region 5', c, ...a.map(x => x.toFixed(2)), ct.toFixed(2)]);
+      if (!open) continue;
+      const sr = el('tr', {class: 'subrow'}); sr.innerHTML = `<td>${esc(c)}</td>${a.map(x => `<td class="n ${clsv(x)}">${Math.abs(x) < 0.5 ? '–' : fmtv(x)}</td>`).join('')}<td class="n">${fmtv(ct)}</td>`;
+      tb.append(sr);
+    }
+  };
+  for (const l of LOCS) addGroup(l.id, `<b>${l.id}</b> ${esc(l.name)}`);
+  addGroup(null, 'Region 5', 'tot');
+  t.append(tb); t._csv = csv;
   // asset detail
   const al = document.getElementById('aLoc').value, q = document.getElementById('aQ').value.trim().toLowerCase();
   const ta = document.getElementById('tAssetDet'); ta.innerHTML = `<thead><tr><th>Asset</th><th>Location</th><th class="n">Miles</th><th class="n">Fuel gal</th>${cats.map(c => `<th class="n">${c}</th>`).join('')}<th class="n">Total</th></tr></thead>`;
@@ -816,6 +836,8 @@ document.getElementById('btnResetA').addEventListener('click', () => { S.p = DEF
 ['fLoc', 'fCls', 'fMoved'].forEach(id => document.getElementById(id).addEventListener('change', renderAssets));
 document.getElementById('fQ').addEventListener('input', renderAssets);
 document.getElementById('dCat').addEventListener('change', renderDetail);
+document.getElementById('expAll').addEventListener('click', () => { S.exp = {ALL: true}; LOCS.forEach(l => S.exp[l.id] = true); save(); renderDetail(); });
+document.getElementById('colAll').addEventListener('click', () => { S.exp = {}; save(); renderDetail(); });
 document.getElementById('aLoc').addEventListener('change', renderDetail);
 document.getElementById('aQ').addEventListener('input', renderDetail);
 function copyCsv(tableId) { const rows = document.getElementById(tableId)._csv || []; const txt = rows.map(r => r.map(c => /[",\n]/.test(c) ? '"' + String(c).replace(/"/g, '""') + '"' : c).join(',')).join('\n');
