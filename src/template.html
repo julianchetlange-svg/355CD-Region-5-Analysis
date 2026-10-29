@@ -200,8 +200,8 @@ td select{padding:4px 6px;border:1px solid var(--line-strong);border-radius:6px;
   <div class="kpis" id="kpis"></div>
   <div class="panel">
     <div class="callout">
-      <div class="ch"><span class="eyebrow">Location charges</span><p><b>What each location is charged under the cost rules.</b> 355CD and 355 Reload carry fuel, maintenance, depreciation and lease. Stores carry fuel, the fixed flat rate and $0.425 per truck mile. Moving an asset changes which rule applies, so this view moves money between locations.</p></div>
-      <div class="op"><span class="eyebrow">Operating cost</span><p><b>What McCoy's actually spends in Region 5.</b> Fuel, maintenance, depreciation and lease for every Region 5 asset, wherever it sits. Flat rates and mileage charges are internal and left out. Only a real change in miles, fuel or fleet size moves this number.</p></div>
+      <div class="ch"><span class="eyebrow">Location charges</span><p><b>What each location is charged under the cost rules.</b> 355CD and 355 Reload carry fuel, maintenance, depreciation, lease, registration, taxes, Geotab and Lytx. Stores carry fuel, the fixed flat rate and $0.425 per truck mile. Moving an asset changes which rule applies, so this view moves money between locations.</p></div>
+      <div class="op"><span class="eyebrow">Operating cost</span><p><b>What McCoy's actually spends in Region 5.</b> Fuel, maintenance, depreciation, lease, registration, taxes and telematics for every Region 5 asset, wherever it sits. Flat rates and mileage charges are internal and left out. Only a real change in miles, fuel or fleet size moves this number.</p></div>
     </div>
   </div>
   <div class="grid2">
@@ -325,10 +325,11 @@ td select{padding:4px 6px;border:1px solid var(--line-strong);border-radius:6px;
     <div class="phead"><h2>Method</h2></div>
     <ul class="rules">
       <li><b>Scope.</b> 126 active assets: the asset roster at 355CD (29 + truck 750049, which is missing from the roster but active at 355CD in the Aug 2026 fleet list), 355 Pharr Reload (11) and stores 015, 033, 037, 041, 088, 089, 093, 097, 100, 103, 108. Rio Truss (950) and 765 are excluded. The roster sets location and in-service date.</li>
-      <li><b>Cost rules.</b> 355CD and 355 Reload: fuel + maintenance + depreciation + lease. Stores: fuel + flat rate, plus $0.425 per mile for trucks. Trailers, forklifts and TMFLs at stores get only the flat rate plus fuel (propane for forklifts).</li>
+      <li><b>Cost rules.</b> 355CD and 355 Reload: fuel + maintenance + depreciation + lease + registration, taxes, Geotab and Lytx. Stores: fuel + flat rate, plus $0.425 per mile for trucks. Trailers, forklifts and TMFLs at stores get only the flat rate plus fuel (propane for forklifts).</li>
       <li><b>Fuel.</b> 12 months of WEX gallons (Oct 2025–Sep 2026; diesel, gasoline and DEF combined) × the 2027 blended monthly rate. Propane: AmeriGas gallons by location for the same months, split evenly across forklifts (033/355/355CD combined total split 3/3/7 by forklift count) × the propane planning price. TMFLs have no separate fuel.</li>
       <li><b>Miles.</b> Geotab miles Oct 2025–Sep 2026; blank months are treated as missing, and the reported-month average × 12 is used. Loaner IDs (e.g. 033-765-694008-flb-LOANER) are matched on the asset number. 626003 uses predecessor 692009. 758005 uses its Jul–Sep run rate. 758011 and 626005 use the 355CD same-type average.</li>
-      <li><b>Maintenance.</b> Vendor invoices Oct 2025–Sep 2026 (2025 and 2026 spend files, all invoice statuses, credits netted), spread evenly across 2027.</li>
+      <li><b>Maintenance.</b> Vendor invoices Oct 2025–Sep 2026 (2025 and 2026 spend files, all invoice statuses, credits netted), spread evenly across 2027. Registration/inspection work orders ($5,442) are excluded because registration now comes from the fee file.</li>
+      <li><b>Registration, taxes, Geotab and Lytx.</b> Monthly charges per asset from the fee file: registration 0.05% and taxes 0.0667% of original value per month, Geotab $26 and Lytx $36 per truck. Charged to 355CD and 355 Reload only; at stores they are built into the flat rate. The operating-cost view carries them for every asset because the company pays them wherever the asset sits. 750049 is estimated from the 2018 24' TA flatbeds.</li>
       <li><b>Depreciation.</b> Monthly amount from the March 2026 file (components such as wraps and kits summed by asset). New units: 758005/758011 $166,407.25 ÷ 60; 626003/626005 $71,123.99 ÷ 60. The in-service month is month 1; trucks and trailers stop after 60 months, forklifts and TMFLs after 84. Leased assets get no depreciation.</li>
       <li><b>Leases.</b> Fixed monthly rate from the lease file. 747104 ($250) and 747106 ($150) are on holding rentals. 380030, 380042, 380067 and 380068 had no rate, so the batch rate of $447.11 is used. All leases run through Dec 2027.</li>
       <li><b>Forklift utilization.</b> Operating hours per forklift per day from DVIR readings through 10/14/2026, compared with the company store average of 3.339; forklift-required yard tickets Oct 2025–Sep 2026 over 307 business days. 355CD has no yard tickets, so its forklift hours scale with its remaining deliveries (deliveries per day over 307 days shown instead); 355 Reload has no data. Store moves spread the store's hours and tickets over the new forklift count.</li>
@@ -354,8 +355,9 @@ const REM = new Set(['TERM', 'OUT']);
 const REM_LABEL = {TERM: 'Terminated (sold / lease returned)', OUT: 'Relocated out of Region 5'};
 const locShort = id => id === 'TERM' ? 'Terminated' : id === 'OUT' ? 'Out of region' : id;
 const ASSETS = DATA.assets; const AMAP = Object.fromEntries(ASSETS.map(a => [a.id, a]));
-const CATS_CH = ['Truck fuel','Forklift fuel','Maintenance','Depreciation','Lease','Flat rate','Mileage charge'];
-const CATS_OP = ['Truck fuel','Forklift fuel','Maintenance','Depreciation','Lease'];
+const CATS_CH = ['Truck fuel','Forklift fuel','Maintenance','Depreciation','Lease','Registration & taxes','Geotab & Lytx','Flat rate','Mileage charge'];
+const CATS_OP = ['Truck fuel','Forklift fuel','Maintenance','Depreciation','Lease','Registration & taxes','Geotab & Lytx'];
+const FIXED = ['Maintenance', 'Depreciation', 'Lease', 'Registration & taxes', 'Geotab & Lytx'];
 const N355 = ASSETS.filter(a => a.loc === '355CD' && a.cls === 'Truck').length;
 const SERVED_TOTAL = Object.values(DATA.served).reduce((s, v) => s + v, 0);
 const DEF = () => ({fuelRate: DATA.fuelRate.slice(), lpRate: DATA.lpRate.slice(), mileRate: DATA.mileRate,
@@ -432,9 +434,9 @@ function run(assign) {
     for (let i = 0; i < 12; i++) {
       const tf = gal / 12 * S.p.fuelRate[i], ff = lp / 12 * S.p.lpRate[i];
       const maint = a.maint * mt / 12, dep = a.dep * a.depElig[i], lease = a.lease;
-      op['Truck fuel'][i] = tf; op['Forklift fuel'][i] = ff; op.Maintenance[i] = maint; op.Depreciation[i] = dep; op.Lease[i] = lease;
+      op['Truck fuel'][i] = tf; op['Forklift fuel'][i] = ff; op.Maintenance[i] = maint; op.Depreciation[i] = dep; op.Lease[i] = lease; op['Registration & taxes'][i] = a.reg; op['Geotab & Lytx'][i] = a.tel;
       ch['Truck fuel'][i] = tf; ch['Forklift fuel'][i] = ff;
-      if (central) { ch.Maintenance[i] = maint; ch.Depreciation[i] = dep; ch.Lease[i] = lease; }
+      if (central) { ch.Maintenance[i] = maint; ch.Depreciation[i] = dep; ch.Lease[i] = lease; ch['Registration & taxes'][i] = a.reg; ch['Geotab & Lytx'][i] = a.tel; }
       else { ch['Flat rate'][i] = flat; if (a.cls === 'Truck') ch['Mileage charge'][i] = m / 12 * S.p.mileRate; }
     }
     return {a, loc, miles: m, gal, lp, ch, op, parts: [{loc, ch, op}]};
@@ -562,7 +564,7 @@ function renderOverview() {
   k.append(kpi('', 'Store charges', `<span class="${dcls(dch - (scen_ - bcen))}">${sgnK(dch - (scen_ - bcen))}</span>`, `${usdK(bc.total - bcen)} baseline → ${usdK(sc.total - scen_)}`));
   k.append(kpi('', 'Region 5 operating cost change', `<span class="${dcls(dop)}">${sgnK(dop)}</span>`, Math.abs(dop) < 500 ? 'Moves shift charges; real spend is unchanged.' : 'Real change from removals and mileage shifts.'));
   const rem = removalSummary();
-  if (rem.n) k.append(kpi('', 'Company savings from terminations', `<span class="${rem.save > 0.5 ? 'down' : ''}">${usdK(rem.save)}</span>`, `Maintenance, depreciation and lease that stop in 2027. ${rem.nT} terminated, ${rem.nO} relocated out (${usdK(rem.out)} moves to other regions).`));
+  if (rem.n) k.append(kpi('', 'Company savings from terminations', `<span class="${rem.save > 0.5 ? 'down' : ''}">${usdK(rem.save)}</span>`, `Maintenance, depreciation, lease and fees that stop in 2027. ${rem.nT} terminated, ${rem.nO} relocated out (${usdK(rem.out)} moves to other regions).`));
   const view = S.view; const B = view === 'op' ? bo : bc, Sx = view === 'op' ? so : sc;
   document.getElementById('monthLede').textContent = `${view === 'op' ? 'Company operating cost' : 'Location charges'}: baseline ${usd(B.total)}, scenario ${usd(Sx.total)}. Fuel falls through the year as the 2027 rate drops from $${S.p.fuelRate[0].toFixed(2)} to $${S.p.fuelRate[11].toFixed(2)}.`;
   drawMonthly(document.getElementById('chMonth'), B.byM, Sx.byM);
@@ -588,7 +590,7 @@ function renderOverview() {
 function removalSummary() {
   let n = 0, nT = 0, nO = 0, save = 0, region = 0, out = 0;
   for (const id in S.assign) { const d = S.assign[id]; if (!REM.has(d)) continue; n++; const k = ASSETS.findIndex(a => a.id === id); const rb = BASE.rows[k], rs = SCEN.rows[k];
-    const fixed = ['Maintenance', 'Depreciation', 'Lease'].reduce((s, c) => s + sum12(rb.op[c]) - sum12(rs.op[c]), 0);
+    const fixed = FIXED.reduce((s, c) => s + sum12(rb.op[c]) - sum12(rs.op[c]), 0);
     region += assetTotal(rb, 'op') - assetTotal(rs, 'op'); if (d === 'TERM') { nT++; save += fixed; } else { nO++; out += fixed; } }
   return {n, nT, nO, save, region, out};
 }
@@ -605,12 +607,12 @@ function renderMoves() {
     const a = AMAP[id], dest = S.assign[id], k = ASSETS.findIndex(x => x.id === id); const rb = BASE.rows[k], rs = SCEN.rows[k]; const eff = S.eff[id] || 0;
     const m = el('div', {class: 'move'}); const sp = el('span'); sp.style.cssText = 'flex:1 1 320px;min-width:0';
     if (REM.has(dest)) {
-      const fixed = ['Maintenance', 'Depreciation', 'Lease'].reduce((s, c) => s + sum12(rb.op[c]) - sum12(rs.op[c]), 0);
+      const fixed = FIXED.reduce((s, c) => s + sum12(rb.op[c]) - sum12(rs.op[c]), 0);
       const book = remainingBook(a, eff);
       const when = eff ? ` from ${MONTHS[eff]}` : '';
       const detail = dest === 'TERM'
-        ? `Saves the company <b>${usd(fixed)}</b> in maintenance, depreciation and lease in 2027${when}. ${a.cls === 'Truck' ? 'Its miles and fuel pass to the remaining trucks at ' + a.loc + '. ' : a.cls === 'Forklift' ? 'Its propane passes to the remaining forklifts at ' + a.loc + '. ' : ''}${a.own === 'Leased' ? 'Lease payments stop; early-return fees are not modeled.' : book > 0 ? `Remaining book value at removal about <b>${usd(book)}</b> (one-time write-off or sale offset, not in the forecast).` : 'Fully depreciated.'}`
-        : `Removes <b>${usd(fixed)}</b> in maintenance, depreciation and lease from Region 5${when}; that cost continues in the receiving region, so the company saves nothing. ${a.cls === 'Truck' ? 'Its miles stay in Region 5 with the remaining trucks at ' + a.loc + '.' : ''}`;
+        ? `Saves the company <b>${usd(fixed)}</b> in maintenance, depreciation, lease, registration, taxes and telematics in 2027${when}. ${a.cls === 'Truck' ? 'Its miles and fuel pass to the remaining trucks at ' + a.loc + '. ' : a.cls === 'Forklift' ? 'Its propane passes to the remaining forklifts at ' + a.loc + '. ' : ''}${a.own === 'Leased' ? 'Lease payments stop; early-return fees are not modeled.' : book > 0 ? `Remaining book value at removal about <b>${usd(book)}</b> (one-time write-off or sale offset, not in the forecast).` : 'Fully depreciated.'}`
+        : `Removes <b>${usd(fixed)}</b> in maintenance, depreciation, lease, registration, taxes and telematics from Region 5${when}; that cost continues in the receiving region, so the company saves nothing. ${a.cls === 'Truck' ? 'Its miles stay in Region 5 with the remaining trucks at ' + a.loc + '.' : ''}`;
       sp.innerHTML = `<b>${esc(id)}</b> ${esc(a.type)} · ${esc(a.loc)} → <b>${dest === 'TERM' ? 'Terminate' : 'Relocate out'}</b><br>${detail}`;
     } else {
       const d = assetTotal(rs, 'charge') - assetTotal(rb, 'charge');

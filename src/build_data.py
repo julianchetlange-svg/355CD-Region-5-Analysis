@@ -60,6 +60,10 @@ T = 'Subcontractor Invoice Total'
 mt = pd.concat([ldm('b4b61a20-Asset_Spend_Data_2025_11.xlsx'), ldm('101fbf67-Asset_Spend_Data_2026_.xlsx')])
 mt = mt.drop_duplicates(['Subcontractor Invoice Reference Number', 'Asset Name', 'Work Order ID', T])
 mtw = mt[(mt.dt >= '2025-10-01') & (mt.dt < '2026-10-01')]
+# registration now comes from the fee file, so registration/inspection work orders leave maintenance
+isreg = mtw['Work Order Category Full Path'].fillna('').str.contains('Regist', case=False)
+reg_removed = mtw[isreg].groupby('Asset Name')[T].sum().to_dict()
+mtw = mtw[~isreg]
 maint = mtw.groupby('Asset Name')[T].sum().to_dict()
 mt['y'] = mt.dt.dt.year; mt['mo'] = mt.dt.dt.month
 yoy = mt[mt.mo <= 10].pivot_table(index='Asset Name', columns='y', values=T, aggfunc='sum')
@@ -161,6 +165,18 @@ for i, r in df[tr].iterrows():
         df.loc[i, 'galNote'] = (r.galNote + '; ' if r.galNote else '') + f'MPG outside type range; scenario uses {r.type} median'
 df['gpm'] = df.gpm.fillna(0)
 
+# registration, taxes, Geotab, Lytx (monthly)
+fee = pd.read_excel(A + '3f23cdde-Reg_Tax_Geo_LYTX.xlsx', sheet_name=0, dtype={'Asset Name': str})
+fee.columns = [c.strip() for c in fee.columns]
+fee = fee.set_index('Asset Name')
+for c in ['Registraiton Fee', 'Monthly Taxes', 'Geotab', 'Lytx']: fee[c] = pd.to_numeric(fee[c]).fillna(0)
+ov = fee.loc[['750019', '750022'], 'Asset Original Value'].astype(float).mean()
+fee.loc['750049', ['Registraiton Fee', 'Monthly Taxes', 'Geotab', 'Lytx']] = [ov * 0.0005, ov * 0.008 / 12, 26, 36]
+df['reg'] = df.id.map(lambda i: round(float(fee.loc[i, 'Registraiton Fee']) + float(fee.loc[i, 'Monthly Taxes']), 4))
+df['tel'] = df.id.map(lambda i: float(fee.loc[i, 'Geotab']) + float(fee.loc[i, 'Lytx']))
+df['feeDetail'] = df.id.map(lambda i: [round(float(fee.loc[i, c]), 2) for c in ['Registraiton Fee', 'Monthly Taxes', 'Geotab', 'Lytx']])
+print('fees monthly all', round(df.reg.sum() + df.tel.sum(), 2), 'central', round(df[df['loc'].isin(CENTRAL)][['reg', 'tel']].sum().sum(), 2), 'reg removed from maint', round(sum(reg_removed.get(i, 0) for i in df.id), 2))
+
 # flags
 fl = []
 for _, r in df.iterrows():
@@ -172,6 +188,7 @@ for _, r in df.iterrows():
     if r.galNote: f.append(r.galNote)
     if r.leaseNote: f.append(r.leaseNote)
     if r.id == '747104': f.append('Owned wrap depreciation ($132.37/mo) excluded')
+    if r.id == '750049': f.append('Registration/taxes estimated from 2018 24\' TA flatbeds (750019/750022 avg value $' + f"{ov:,.0f}" + '); Geotab $26, Lytx $36')
     if r.id == '750049': f.append('Not on Current_Assets_7; added from Aug 2026 fleet list (active at 355CD). 2019 truck past 60 months; refurb wrap $132.38/mo set to $0 per roster rule')
     fl.append(f)
 df['flags'] = fl
