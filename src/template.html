@@ -179,6 +179,7 @@ td select{padding:4px 6px;border:1px solid var(--line-strong);border-radius:6px;
     </div>
     <div class="tools">
       <span class="pill base" id="hdrStatus">Baseline only</span>
+      <button class="btn sun small" id="btnExport" type="button">Export to Excel</button>
       <button class="btn ghost small" id="btnReset" type="button">Reset scenario</button>
     </div>
   </div>
@@ -229,8 +230,8 @@ td select{padding:4px 6px;border:1px solid var(--line-strong);border-radius:6px;
 <section class="view" id="v-reassign" hidden>
   <div class="grid2">
     <div class="panel">
-      <div class="phead"><div><h2>Moves in this scenario</h2><p class="lede">Pick a new location for any asset in the table below. Costs, mileage and utilization update immediately using the destination's rules.</p></div>
-        <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small sun" id="btnCopyScen" type="button">Copy scenario</button><button class="btn small" id="btnOld" type="button" hidden>Restore my earlier moves</button><button class="btn small" id="btnPreset" type="button">Load starting scenario</button><button class="btn small" id="btnReset2" type="button">Reset scenario</button></span></div>
+      <div class="phead"><div><h2>Moves in this scenario</h2><p class="lede">Pick a new location for any asset in the table below. Costs, mileage and utilization update immediately using the destination's rules. Changes are kept in this browser only; use Export to Excel to save a copy and Import scenario to load one back.</p></div>
+        <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small sun" id="btnExport2" type="button">Export to Excel</button><button class="btn small" id="btnImport" type="button">Import scenario</button><input type="file" id="fileImport" accept=".xlsx,.xls" hidden><button class="btn small" id="btnCopyScen" type="button">Copy scenario</button><button class="btn small" id="btnOld" type="button" hidden>Restore my earlier moves</button><button class="btn small" id="btnPreset" type="button">Load starting scenario</button><button class="btn small" id="btnReset2" type="button">Reset scenario</button></span></div>
       <textarea id="scenText" hidden readonly rows="6" style="width:100%;margin-bottom:10px;font-family:var(--font-mono);font-size:12px;border:1px solid var(--line-strong);border-radius:6px;background:var(--panel);color:var(--fg);padding:8px" aria-label="Scenario as text"></textarea>
       <div class="moves" id="movesList"></div>
     </div>
@@ -346,6 +347,7 @@ td select{padding:4px 6px;border:1px solid var(--line-strong);border-radius:6px;
 <div class="tip" id="tip" hidden></div>
 <div class="toast" id="toast" hidden></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 const DATA = __DATA__;
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -806,5 +808,143 @@ const VIEWS = ['overview', 'reassign', 'utilization', 'detail', 'assumptions'];
 function route() { const h = location.hash.replace('#', ''); const v = VIEWS.includes(h) ? h : 'overview'; VIEWS.forEach(x => document.getElementById('v-' + x).hidden = x !== v); document.querySelectorAll('#tabs a').forEach(a => a.toggleAttribute('aria-current', a.dataset.v === v) || (a.dataset.v === v && a.setAttribute('aria-current', 'page'))); document.querySelectorAll('#tabs a').forEach(a => { if (a.dataset.v === v) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); }); if (v === 'overview') renderOverview(); }
 addEventListener('hashchange', route);
 let rT; addEventListener('resize', () => { clearTimeout(rT); rT = setTimeout(renderOverview, 150); });
+
+/* ---------- Excel export / import ---------- */
+const destName = d => d === 'TERM' ? 'Terminate' : d === 'OUT' ? 'Relocate out' : d;
+const r2 = v => (v == null || Number.isNaN(v)) ? null : Math.round(v * 100) / 100;
+function mkSheet(aoa, money, widths) {
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  const rg = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+  for (let R = 0; R <= rg.e.r; R++) for (const C of (money || [])) { const c = ws[XLSX.utils.encode_cell({r: R, c: C})]; if (c && typeof c.v === 'number') c.z = '$#,##0;[Red]-$#,##0'; }
+  ws['!cols'] = (widths || []).map(w => ({wch: w}));
+  return ws;
+}
+function forkliftData() {
+  const FK = DATA.forklift, out = [];
+  const cnt = (res, id) => res.rows.filter(r => r.a.cls === 'Forklift' && r.loc === id).length;
+  const vOut = Object.values(SCEN.vol).reduce((s, v) => s + v.v, 0);
+  for (const l of LOCS) {
+    const id = l.id, m = FK.locs[id], n = cnt(BASE, id), n2 = cnt(SCEN, id);
+    if (!m) { out.push({id, n, n2}); continue; }
+    const D = id === '355CD' ? DATA.metrics['355CD'].deliveries : 0, D2 = id === '355CD' ? Math.max(0, D - vOut) : 0;
+    const H = m.hpd * m.n, H2 = id === '355CD' && D ? H * D2 / D : H;
+    out.push({id, n, n2, hpd: m.hpd, hpd2: n2 ? H2 / n2 : null, tpd: m.tpd, tpu: m.tpd != null ? m.tpd / m.n : null, tpu2: m.tpd != null && n2 ? m.tpd / n2 : null,
+      dpd: D ? D / FK.bizDays : null, dpd2: D ? D2 / FK.bizDays : null});
+  }
+  return out;
+}
+function exportExcel() {
+  if (typeof XLSX === 'undefined') { toast('Excel library did not load; check your connection and try again'); return; }
+  const wb = XLSX.utils.book_new();
+  const bc = totals(BASE, 'charge'), sc = totals(SCEN, 'charge'), bo = totals(BASE, 'op'), so = totals(SCEN, 'op');
+  const cen = p => isCentral(p.loc), sto = p => !!LOC[p.loc] && !isCentral(p.loc);
+  const ids = Object.keys(S.assign).filter(k => S.assign[k] && S.assign[k] !== AMAP[k].loc);
+  const nr = ids.filter(k => REM.has(S.assign[k])).length; const rem = removalSummary();
+  // Summary
+  const sm = [['Region 5 Fleet Forecast 2027 - scenario export'], ['Exported', new Date().toLocaleString()], ['Changes', `${ids.length - nr} moved, ${nr} removed`], [],
+    ['Measure', 'Baseline', 'Scenario', 'Change'],
+    ['Location charges', r2(bc.total), r2(sc.total), r2(sc.total - bc.total)],
+    ['   355CD + 355 Reload', r2(totals(BASE, 'charge', cen).total), r2(totals(SCEN, 'charge', cen).total), r2(totals(SCEN, 'charge', cen).total - totals(BASE, 'charge', cen).total)],
+    ['   Stores', r2(totals(BASE, 'charge', sto).total), r2(totals(SCEN, 'charge', sto).total), r2(totals(SCEN, 'charge', sto).total - totals(BASE, 'charge', sto).total)],
+    ['Region 5 operating cost', r2(bo.total), r2(so.total), r2(so.total - bo.total)],
+    ['Company savings from terminations', null, r2(rem.save), null], ['Cost relocated to other regions', null, r2(rem.out), null], [],
+    ['Location', 'Rules', 'Assets (baseline)', 'Assets (scenario)', 'Baseline charges', 'Scenario charges', 'Charges change', 'Baseline operating', 'Scenario operating', 'Operating change']];
+  for (const l of LOCS) { const f = p => p.loc === l.id; const b = totals(BASE, 'charge', f).total, s = totals(SCEN, 'charge', f).total, ob = totals(BASE, 'op', f).total, os = totals(SCEN, 'op', f).total;
+    sm.push([locLabel(l.id), l.kind, BASE.rows.filter(r => r.loc === l.id).length, SCEN.rows.filter(r => r.loc === l.id).length, r2(b), r2(s), r2(s - b), r2(ob), r2(os), r2(os - ob)]); }
+  sm.push([]); sm.push(['Cost category (annual)', 'Baseline charges', 'Scenario charges', 'Change', 'Baseline operating', 'Scenario operating', 'Change']);
+  CATS_CH.forEach(c => sm.push([c, r2(bc.byC[c]), r2(sc.byC[c]), r2(sc.byC[c] - bc.byC[c]), bo.byC[c] != null ? r2(bo.byC[c]) : null, so.byC[c] != null ? r2(so.byC[c]) : null, so.byC[c] != null ? r2(so.byC[c] - bo.byC[c]) : null]));
+  XLSX.utils.book_append_sheet(wb, mkSheet(sm, [1, 2, 3, 4, 5, 6, 7, 8, 9], [34, 16, 16, 16, 16, 16, 16, 16, 16, 16]), 'Summary');
+  // Changes
+  const ch = [['Asset', 'Type', 'Class', 'Owned', 'From', 'To', 'Start month', 'Baseline charges', 'Scenario charges', 'Charges change', 'Baseline operating', 'Scenario operating', 'Operating change', 'Company savings (terminate)', 'Remaining book value', 'Notes']];
+  for (const id of ids) { const k = ASSETS.findIndex(a => a.id === id), a = ASSETS[k], rb = BASE.rows[k], rs = SCEN.rows[k], d = S.assign[id], eff = S.eff[id] || 0;
+    const fixed = FIXED.reduce((s, c) => s + sum12(rb.op[c]) - sum12(rs.op[c]), 0);
+    const b = assetTotal(rb, 'charge'), s = assetTotal(rs, 'charge'), ob = assetTotal(rb, 'op'), os = assetTotal(rs, 'op');
+    ch.push([id, a.type, a.cls, a.own, a.loc, destName(d), MONTHS[eff], r2(b), r2(s), r2(s - b), r2(ob), r2(os), r2(os - ob), d === 'TERM' ? r2(fixed) : null, d === 'TERM' ? r2(remainingBook(a, eff)) : null,
+      d === 'OUT' ? 'Cost continues in receiving region' : d === 'TERM' ? 'Work passes to remaining units at ' + a.loc : '']); }
+  if (!ids.length) ch.push(['No changes in this scenario']);
+  XLSX.utils.book_append_sheet(wb, mkSheet(ch, [7, 8, 9, 10, 11, 12, 13, 14], [10, 24, 10, 9, 8, 13, 11, 15, 15, 14, 15, 15, 14, 16, 16, 36]), 'Changes');
+  // Volume
+  const vo = [['Store', '355CD deliveries / yr', 'Trucks moved in from 355CD', 'Auto deliveries returned', 'Override', 'Deliveries returned (used)']];
+  Object.keys(DATA.served).forEach(s => { const v = SCEN.vol[s]; vo.push([s, Math.round(DATA.served[s]), v.trucks, Math.round(v.auto), v.ov ? Math.round(v.v) : null, Math.round(v.v)]); });
+  XLSX.utils.book_append_sheet(wb, mkSheet(vo, [], [8, 20, 24, 22, 10, 24]), 'Volume overrides');
+  // Assets
+  const ah = ['Asset', 'Type', 'Class', 'Owned', 'Baseline location', 'Scenario location', 'Miles (baseline)', 'Miles (scenario)', ...CATS_CH.map(c => c + ' (scenario)'), 'Baseline charges', 'Scenario charges', 'Charges change', 'Baseline operating', 'Scenario operating', 'Operating change', 'Notes'];
+  const as = [ah];
+  SCEN.rows.forEach((rs, k) => { const rb = BASE.rows[k], a = rs.a; const b = assetTotal(rb, 'charge'), s = assetTotal(rs, 'charge'), ob = assetTotal(rb, 'op'), os = assetTotal(rs, 'op');
+    as.push([a.id, a.type, a.cls, a.own, a.loc, locShort(rs.loc), a.cls === 'Truck' ? Math.round(rb.miles) : null, a.cls === 'Truck' ? Math.round(rs.miles) : null, ...CATS_CH.map(c => r2(sum12(rs.ch[c]))), r2(b), r2(s), r2(s - b), r2(ob), r2(os), r2(os - ob), a.flags.join('; ')]); });
+  const mcols = []; for (let c = 8; c < 8 + CATS_CH.length + 6; c++) mcols.push(c);
+  XLSX.utils.book_append_sheet(wb, mkSheet(as, mcols, [10, 24, 9, 8, 10, 12, 10, 10, ...CATS_CH.map(() => 13), 14, 14, 13, 14, 14, 13, 50]), 'Assets');
+  // Monthly
+  const mo = [['View', 'Location', 'Case', ...MONTHS, '2027']];
+  for (const [view, key] of [['Location charges', 'ch'], ['Operating cost', 'op']]) {
+    const cats = key === 'op' ? CATS_OP : CATS_CH;
+    const val = (res, loc) => { const m = new Array(12).fill(0); for (const r of res.rows) for (const pt of r.parts) { if (pt.loc !== loc) continue; for (const c of cats) for (let i = 0; i < 12; i++) m[i] += pt[key][c][i]; } return m; };
+    for (const l of LOCS) { const b = val(BASE, l.id), s = val(SCEN, l.id), d = s.map((x, i) => x - b[i]);
+      [['Baseline', b], ['Scenario', s], ['Change', d]].forEach(([nm, arr]) => mo.push([view, locLabel(l.id), nm, ...arr.map(r2), r2(sum12(arr))])); }
+  }
+  const mc = []; for (let c = 3; c <= 15; c++) mc.push(c);
+  XLSX.utils.book_append_sheet(wb, mkSheet(mo, mc, [16, 28, 10, ...MONTHS.map(() => 11), 13]), 'Monthly');
+  // Truck utilization
+  const U = utilization(BASE, SCEN);
+  const uh = ['Location', 'Trucks (baseline)', 'Trucks (scenario)', 'Deliveries / yr', 'Deliveries / yr (scen)', 'Deliveries per truck', 'Deliveries per truck (scen)', 'Avg daily deliveries', 'Avg daily deliveries (scen)', 'Trips / yr', 'Trips / yr (scen)', 'Miles / yr', 'Miles / yr (scen)', 'Time-away utilization', 'Time-away utilization (scen)', 'Asset days active', 'Asset days active (scen)', 'Flat-rate charges / yr', 'Flat-rate charges / yr (scen)', 'Fuel / yr (2026 basis)', 'Fuel / yr (scen)', 'Cost per delivery', 'Cost per delivery (scen)', 'Cost per mile', 'Cost per mile (scen)', 'Mileage charge change / yr'];
+  const ut = [uh];
+  U.forEach(u => ut.push([locLabel(u.id), u.N, u.N2, Math.round(u.D), Math.round(u.D2), Math.round(u.dpt), Math.round(u.dpt2), r2(u.dd), r2(u.dd2), Math.round(u.trips), Math.round(u.trips2), Math.round(u.mi), Math.round(u.mi2), r2(u.ta), r2(u.ta2), r2(u.da), r2(u.da2), r2(u.fc), r2(u.fc2), r2(u.fuel), r2(u.fuel2), r2(u.cpd), r2(u.cpd2), r2(u.cpm), r2(u.cpm2), u.id === '355CD' ? null : r2(u.milech)]));
+  const wsU = mkSheet(ut, [17, 18, 19, 20, 25], [28, ...uh.slice(1).map(() => 14)]);
+  for (let R = 1; R < ut.length; R++) for (const C of [13, 14, 15, 16]) { const c = wsU[XLSX.utils.encode_cell({r: R, c: C})]; if (c) c.z = '0.0%'; }
+  for (let R = 1; R < ut.length; R++) for (const C of [21, 22, 23, 24]) { const c = wsU[XLSX.utils.encode_cell({r: R, c: C})]; if (c) c.z = '$#,##0.00'; }
+  XLSX.utils.book_append_sheet(wb, wsU, 'Truck utilization');
+  // Forklift utilization
+  const fk = [['Location', 'Forklifts (baseline)', 'Forklifts (scenario)', 'Hrs / day per unit', 'Hrs / day per unit (scen)', 'vs company avg ' + DATA.forklift.companyHpd, 'vs company avg (scen)', 'Yard tickets / day', 'Tickets / unit / day', 'Tickets / unit / day (scen)', 'Deliveries / day (355CD)', 'Deliveries / day (355CD, scen)']];
+  const avg = DATA.forklift.companyHpd;
+  forkliftData().forEach(f => fk.push([locLabel(f.id), f.n, f.n2, r2(f.hpd), r2(f.hpd2), f.hpd != null ? r2(f.hpd / avg - 1) : null, f.hpd2 != null ? r2(f.hpd2 / avg - 1) : null, r2(f.tpd), r2(f.tpu), r2(f.tpu2), r2(f.dpd), r2(f.dpd2)]));
+  const wsF = mkSheet(fk, [], [28, 12, 12, 12, 14, 14, 14, 12, 12, 14, 14, 16]);
+  for (let R = 1; R < fk.length; R++) for (const C of [5, 6]) { const c = wsF[XLSX.utils.encode_cell({r: R, c: C})]; if (c) c.z = '0%'; }
+  XLSX.utils.book_append_sheet(wb, wsF, 'Forklift utilization');
+  // Inputs (re-importable)
+  const ip = [['Key', 'Input', 'Value']];
+  ip.push(['mileGrowth', 'Truck mileage change vs last 12 months (%)', S.p.mileGrowth], ['maintTrend', 'Maintenance trend (%)', S.p.maintTrend], ['mileRate', 'Store mileage charge ($/mile)', S.p.mileRate], ['vpt', 'Deliveries per moved truck (per year)', S.p.vpt]);
+  MONTHS.forEach((m, i) => ip.push(['fuelRate.' + i, 'Blended fuel rate ' + m + ' 2027 ($/gal)', S.p.fuelRate[i]]));
+  MONTHS.forEach((m, i) => ip.push(['lpRate.' + i, 'Propane price ' + m + ' 2027 ($/gal)', S.p.lpRate[i]]));
+  Object.keys(S.p.flat).sort().forEach(ty => ip.push(['flat.' + ty, 'Flat rate ' + ty + ' ($/month)', S.p.flat[ty]]));
+  XLSX.utils.book_append_sheet(wb, mkSheet(ip, [], [26, 44, 12]), 'Inputs');
+  const stamp = new Date(); const fn = `Region5_Fleet_Scenario_${stamp.getFullYear()}-${String(stamp.getMonth() + 1).padStart(2, '0')}-${String(stamp.getDate()).padStart(2, '0')}.xlsx`;
+  let framed = false; try { framed = window.self !== window.top; } catch (e) { framed = true; }
+  if (framed) { toast('Downloads are blocked in this preview. Open the GitHub page to export to Excel.'); return; }
+  try { XLSX.writeFile(wb, fn); toast('Excel file downloaded'); } catch (e) { toast('Download was blocked; open the GitHub page to export'); }
+}
+function importExcel(file) {
+  if (typeof XLSX === 'undefined') { toast('Excel library did not load; check your connection and try again'); return; }
+  const rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const wb = XLSX.read(new Uint8Array(rd.result), {type: 'array'});
+      const ws = wb.Sheets['Changes']; if (!ws) { toast('No "Changes" tab found in that file'); return; }
+      const rows = XLSX.utils.sheet_to_json(ws, {defval: ''});
+      const assign = {}, eff = {}; const skipped = [];
+      for (const r of rows) {
+        const id = String(r['Asset'] || '').trim(); if (!id || !AMAP[id]) { if (id && !/^No changes/.test(id)) skipped.push(id); continue; }
+        let to = String(r['To'] || '').trim(); const tl = to.toLowerCase();
+        to = tl.startsWith('term') ? 'TERM' : tl.startsWith('reloc') ? 'OUT' : to.toUpperCase();
+        if (!REM.has(to) && !LOC[to]) { skipped.push(id); continue; }
+        if (to === AMAP[id].loc) continue;
+        assign[id] = to; const mi = MONTHS.indexOf(String(r['Start month'] || 'Jan').trim().slice(0, 3)); if (mi > 0) eff[id] = mi;
+      }
+      const volOv = {}; const wv = wb.Sheets['Volume overrides'];
+      if (wv) XLSX.utils.sheet_to_json(wv, {defval: ''}).forEach(r => { const s = String(r['Store']).padStart(3, '0'); if (DATA.served[s] !== undefined && r['Override'] !== '' && r['Override'] != null) volOv[s] = +r['Override']; });
+      const wi = wb.Sheets['Inputs'];
+      if (wi) { const p = DEF(); XLSX.utils.sheet_to_json(wi, {defval: ''}).forEach(r => { const k = String(r['Key']); const v = parseFloat(r['Value']); if (isNaN(v)) return;
+        if (k.startsWith('fuelRate.')) p.fuelRate[+k.split('.')[1]] = v; else if (k.startsWith('lpRate.')) p.lpRate[+k.split('.')[1]] = v; else if (k.startsWith('flat.')) { const ty = k.slice(5); if (ty in p.flat) p.flat[ty] = v; } else if (k in p) p[k] = v; });
+        S.p = p; ['gFuel', 'gLp', 'tFlat'].forEach(id => document.getElementById(id).innerHTML = ''); }
+      S.assign = assign; S.eff = eff; S.volOv = volOv;
+      changed(`Loaded ${Object.keys(assign).length} changes from ${file.name}` + (skipped.length ? ` (skipped ${skipped.length}: ${skipped.slice(0, 5).join(', ')})` : ''));
+    } catch (e) { toast('Could not read that file. Use a workbook exported from this page.'); }
+  };
+  rd.readAsArrayBuffer(file);
+}
+document.getElementById('btnExport').addEventListener('click', exportExcel);
+document.getElementById('btnExport2').addEventListener('click', exportExcel);
+document.getElementById('btnImport').addEventListener('click', () => document.getElementById('fileImport').click());
+document.getElementById('fileImport').addEventListener('change', e => { const f = e.target.files[0]; if (f) importExcel(f); e.target.value = ''; });
+
 renderAll(); route();
 </script>

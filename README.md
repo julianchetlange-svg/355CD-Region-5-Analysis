@@ -2,7 +2,9 @@
 
 Interactive dashboard that forecasts 2027 fleet costs for McCoy's Region 5 (355CD Pharr Central Delivery, 355 Pharr Reload and 11 stores) and compares the current delivery model with scenarios that reassign, terminate or relocate assets.
 
-Open `index.html` in a browser; it is fully self-contained. Scenario changes are saved in the viewer's browser only.
+Open `index.html` in a browser (or the GitHub Pages site). Scenario changes are kept in the viewer's browser only.
+
+**Saving and sharing a scenario:** use **Export to Excel** to download a workbook (Summary, Changes, Volume overrides, Assets, Monthly, Truck utilization, Forklift utilization, Inputs). Use **Import scenario** on the Reassign assets tab to load that workbook back; the changes, delivery overrides and inputs are restored. The Excel library loads from cdnjs, so exporting needs an internet connection.
 
 ## What it shows
 - Baseline vs. scenario 2027 costs by month, location, asset and cost category.
