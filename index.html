@@ -170,11 +170,12 @@ td select{padding:4px 6px;border:1px solid var(--line-strong);border-radius:6px;
 .xbar b{color:var(--fg)}
 .xbar .st{font-size:12px;color:var(--muted)}
 .xbar .st.dirty{color:var(--up);font-weight:600}
-.caret{border:0;background:transparent;color:var(--muted);cursor:pointer;padding:0 6px 0 0;font-size:12px;line-height:1;display:inline-block;width:18px;text-align:left}
-.caret[aria-expanded="true"]{transform:rotate(90deg);transform-origin:5px 50%}
+.caret{border:1px solid var(--line-strong);background:var(--panel);color:var(--accent);cursor:pointer;padding:0;margin-right:8px;font-size:13px;font-weight:700;line-height:1;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:5px;vertical-align:middle}
+.caret:hover{background:var(--accent-soft);border-color:var(--accent)}
+.caret[aria-expanded="true"]{transform:rotate(90deg);background:var(--accent-soft);border-color:var(--accent)}
 @media (prefers-reduced-motion: no-preference){.caret{transition:transform .15s}}
 tr.subrow td{font-size:12.5px;color:var(--muted);background:var(--panel)}
-tr.subrow td:first-child{padding-left:34px}
+tr.subrow td:first-child{padding-left:40px}
 tr.tot .caret{color:var(--fg)}
 .toast{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:13px;z-index:60}
 @media (prefers-reduced-motion: no-preference){.ucard,.kpi{transition:border-color .2s}}
@@ -746,7 +747,7 @@ function renderDetail() {
     const v = new Array(12).fill(0); parts.forEach(([, a]) => a.forEach((x, i) => v[i] += x)); const T = sum12(v);
     const open = !!S.exp[id || 'ALL'];
     const tr = el('tr', {class: rowCls || ''});
-    tr.innerHTML = `<td><button class="caret" type="button" aria-expanded="${open}" aria-label="Show cost categories for ${esc(label)}">▸</button>${label}</td>${v.map(x => `<td class="n ${clsv(x)}">${fmtv(x)}</td>`).join('')}<td class="n"><b>${fmtv(T)}</b></td>`;
+    tr.innerHTML = `<td><button class="caret" type="button" aria-expanded="${open}" aria-label="Show cost categories for ${esc(label)}">▶</button>${label}</td>${v.map(x => `<td class="n ${clsv(x)}">${fmtv(x)}</td>`).join('')}<td class="n"><b>${fmtv(T)}</b></td>`;
     tr.querySelector('.caret').addEventListener('click', () => { S.exp[id || 'ALL'] = !open; save(); renderDetail(); });
     tb.append(tr); csv.push([id ? locLabel(id) : 'Region 5', 'Total', ...v.map(x => x.toFixed(2)), T.toFixed(2)]);
     for (const [c, a] of parts) {
