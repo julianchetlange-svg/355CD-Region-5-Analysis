@@ -175,7 +175,7 @@ td select{padding:4px 6px;border:1px solid var(--line-strong);border-radius:6px;
     <img src="__LOGO__" alt="McCoy's Building Supply">
     <div class="ttl">
       <h1>Region 5 Fleet Forecast · 2027</h1>
-      <div class="sub">355CD Pharr Central Delivery, 355 Pharr Reload and 11 stores · 126 assets · baseline vs. reassignment scenario</div>
+      <div class="sub">355CD Pharr Central Delivery, 355 Pharr Reload and 11 stores · 125 assets · baseline vs. reassignment scenario</div>
     </div>
     <div class="tools">
       <span class="pill base" id="hdrStatus">Baseline only</span>
@@ -324,12 +324,12 @@ td select{padding:4px 6px;border:1px solid var(--line-strong);border-radius:6px;
   <div class="panel">
     <div class="phead"><h2>Method</h2></div>
     <ul class="rules">
-      <li><b>Scope.</b> 126 active assets: the asset roster at 355CD (29 + truck 750049, which is missing from the roster but active at 355CD in the Aug 2026 fleet list), 355 Pharr Reload (11) and stores 015, 033, 037, 041, 088, 089, 093, 097, 100, 103, 108. Rio Truss (950) and 765 are excluded. The roster sets location and in-service date.</li>
+      <li><b>Scope.</b> 125 active assets from the asset roster at 355CD (29), 355 Pharr Reload (11) and stores 015, 033, 037, 041, 088, 089, 093, 097, 100, 103, 108. Rio Truss (950) and 765 are excluded. The roster sets location and in-service date.</li>
       <li><b>Cost rules.</b> 355CD and 355 Reload: fuel + maintenance + depreciation + lease + registration, taxes, Geotab and Lytx. Stores: fuel + flat rate, plus $0.425 per mile for trucks. Trailers, forklifts and TMFLs at stores get only the flat rate plus fuel (propane for forklifts).</li>
       <li><b>Fuel.</b> 12 months of WEX gallons (Oct 2025–Sep 2026; diesel, gasoline and DEF combined) × the 2027 blended monthly rate. Propane: AmeriGas gallons by location for the same months, split evenly across forklifts (033/355/355CD combined total split 3/3/7 by forklift count) × the propane planning price. TMFLs have no separate fuel.</li>
       <li><b>Miles.</b> Geotab miles Oct 2025–Sep 2026; blank months are treated as missing, and the reported-month average × 12 is used. Loaner IDs (e.g. 033-765-694008-flb-LOANER) are matched on the asset number. 626003 uses predecessor 692009. 758005 uses its Jul–Sep run rate. 758011 and 626005 use the 355CD same-type average.</li>
       <li><b>Maintenance.</b> Vendor invoices Oct 2025–Sep 2026 (2025 and 2026 spend files, all invoice statuses, credits netted), spread evenly across 2027. Registration/inspection work orders ($5,442) are excluded because registration now comes from the fee file.</li>
-      <li><b>Registration, taxes, Geotab and Lytx.</b> Monthly charges per asset from the fee file: registration 0.05% and taxes 0.0667% of original value per month, Geotab $26 and Lytx $36 per truck. Charged to 355CD and 355 Reload only; at stores they are built into the flat rate. The operating-cost view carries them for every asset because the company pays them wherever the asset sits. 750049 is estimated from the 2018 24' TA flatbeds.</li>
+      <li><b>Registration, taxes, Geotab and Lytx.</b> Monthly charges per asset from the fee file: registration 0.05% and taxes 0.0667% of original value per month, Geotab $26 and Lytx $36 per truck. Charged to 355CD and 355 Reload only; at stores they are built into the flat rate. The operating-cost view carries them for every asset because the company pays them wherever the asset sits.</li>
       <li><b>Depreciation.</b> Monthly amount from the March 2026 file (components such as wraps and kits summed by asset). New units: 758005/758011 $166,407.25 ÷ 60; 626003/626005 $71,123.99 ÷ 60. The in-service month is month 1; trucks and trailers stop after 60 months, forklifts and TMFLs after 84. Leased assets get no depreciation.</li>
       <li><b>Leases.</b> Fixed monthly rate from the lease file. 747104 ($250) and 747106 ($150) are on holding rentals. 380030, 380042, 380067 and 380068 had no rate, so the batch rate of $447.11 is used. All leases run through Dec 2027.</li>
       <li><b>Forklift utilization.</b> Operating hours per forklift per day from DVIR readings through 10/14/2026, compared with the company store average of 3.339; forklift-required yard tickets Oct 2025–Sep 2026 over 307 business days. 355CD has no yard tickets, so its forklift hours scale with its remaining deliveries (deliveries per day over 307 days shown instead); 355 Reload has no data. Store moves spread the store's hours and tickets over the new forklift count.</li>

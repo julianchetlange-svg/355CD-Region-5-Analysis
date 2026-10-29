@@ -8,13 +8,7 @@ WIN = [f'2025-{m:02d}' for m in (10, 11, 12)] + [f'2026-{m:02d}' for m in range(
 # ---------- roster ----------
 a = pd.read_excel(A + '76d1ece1-Current_Assets_7.xlsx', header=1, dtype=str)
 a = a[a['Store Number'].isin(LOCS)].copy()
-# 750049: active 355CD truck missing from Current_Assets_7; taken from the Aug 2026 fleet list
-fl8 = pd.read_excel(A + '9e913d22-BA_-_McCoys_Asset_Depreciation_Forecast_Fleet_Detail.xlsx', sheet_name=1, dtype=str)
-add = fl8[fl8['Asset Name'] == '750049'].iloc[0]
-a = pd.concat([a, pd.DataFrame([{'Store Number': '355CD', 'Store Name': 'Pharr Central Delivery', 'Store District': '033/355 Multi-Department',
-    'Asset Name': '750049', 'Asset Template Name': add['Asset Template Name'], 'Asset Manufacturer Name': add['Asset Manufacturer Name'],
-    'Asset Serial Number': add['Asset Serial Number'], 'Asset Ownership': add['Asset Ownership'], 'Asset Status': add['Asset Status'],
-    'Asset Date of Origination': add['Asset Date of Origination'][:10]}])], ignore_index=True)
+# 750049 excluded: being sold (confirmed Oct 29, 2026)
 names = a.groupby('Store Number')['Store Name'].first().to_dict()
 TRUCK = ['Tractor TA', 'Tractor SA', 'Pickup', "24' TA Flatbed", "20' Slide Flatbed", "12' Slide Flatbed", "24' Conveyor", "16' Conveyor"]
 def cls(t):
@@ -170,8 +164,6 @@ fee = pd.read_excel(A + '3f23cdde-Reg_Tax_Geo_LYTX.xlsx', sheet_name=0, dtype={'
 fee.columns = [c.strip() for c in fee.columns]
 fee = fee.set_index('Asset Name')
 for c in ['Registraiton Fee', 'Monthly Taxes', 'Geotab', 'Lytx']: fee[c] = pd.to_numeric(fee[c]).fillna(0)
-ov = fee.loc[['750019', '750022'], 'Asset Original Value'].astype(float).mean()
-fee.loc['750049', ['Registraiton Fee', 'Monthly Taxes', 'Geotab', 'Lytx']] = [ov * 0.0005, ov * 0.008 / 12, 26, 36]
 df['reg'] = df.id.map(lambda i: round(float(fee.loc[i, 'Registraiton Fee']) + float(fee.loc[i, 'Monthly Taxes']), 4))
 df['tel'] = df.id.map(lambda i: float(fee.loc[i, 'Geotab']) + float(fee.loc[i, 'Lytx']))
 df['feeDetail'] = df.id.map(lambda i: [round(float(fee.loc[i, c]), 2) for c in ['Registraiton Fee', 'Monthly Taxes', 'Geotab', 'Lytx']])
@@ -188,8 +180,6 @@ for _, r in df.iterrows():
     if r.galNote: f.append(r.galNote)
     if r.leaseNote: f.append(r.leaseNote)
     if r.id == '747104': f.append('Owned wrap depreciation ($132.37/mo) excluded')
-    if r.id == '750049': f.append('Registration/taxes estimated from 2018 24\' TA flatbeds (750019/750022 avg value $' + f"{ov:,.0f}" + '); Geotab $26, Lytx $36')
-    if r.id == '750049': f.append('Not on Current_Assets_7; added from Aug 2026 fleet list (active at 355CD). 2019 truck past 60 months; refurb wrap $132.38/mo set to $0 per roster rule')
     fl.append(f)
 df['flags'] = fl
 
