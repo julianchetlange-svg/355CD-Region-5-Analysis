@@ -235,3 +235,13 @@ out['forklift'] = dict(locs=fk, companyHpd=float(hdr.iloc[3, 1]), bizDays=float(
 json.dump(out, open(S + 'data.json', 'w'))
 cnt = df[df.cls == 'Forklift'].groupby('loc').size().to_dict()
 print({k: (v['n'], cnt.get(k)) for k, v in fk.items()}, out['forklift']['companyHpd'], out['forklift']['bizDays'])
+
+# ---------- maintenance seasonality (calendar-month index, mean = 1) ----------
+ms = mt[(mt.dt >= '2025-01-01') & (mt.dt < '2026-10-01') & ~mt['Work Order Category Full Path'].fillna('').str.contains('Regist', case=False)]
+def season(x):
+    m = x.groupby([x.dt.dt.year, x.dt.dt.month])[T].sum().unstack(0)
+    i = (m / m.mean()).mean(axis=1).reindex(range(1, 13))
+    return [float(v) for v in (i / i.mean())]
+out['maintSeason'] = dict(region=season(ms[ms['Asset Name'].isin(set(df.id))]), company=season(ms))
+json.dump(out, open(S + 'data.json', 'w'))
+print('season', out['maintSeason'])

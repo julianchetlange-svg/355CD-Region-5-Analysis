@@ -318,6 +318,7 @@ tr.tot .caret{color:var(--fg)}
       <div>
         <div class="field"><label for="iGrowth">Truck mileage change vs. last 12 months (%)</label><input id="iGrowth" type="number" step="0.5"><small>Applies to every truck's baseline miles, fuel gallons and mileage charge.</small></div>
         <div class="field"><label for="iMaint">Maintenance trend vs. last 12 months (%)</label><input id="iMaint" type="number" step="0.5"><small>Store spend fell about 13% year over year; 355CD rose 6%.</small></div>
+        <div class="field"><label for="iSeason">Maintenance timing by month</label><select id="iSeason" style="padding:6px 8px;border:1px solid var(--line-strong);border-radius:6px;background:var(--panel);max-width:280px"><option value="region">Region 5 history (Jan 2025–Sep 2026)</option><option value="company">Company-wide history</option><option value="flat">Flat (annual ÷ 12)</option></select><small>Spreads each asset's annual maintenance by the historical monthly pattern. Annual totals do not change.</small></div>
         <div class="field"><label for="iMile">Store mileage charge ($ per mile)</label><input id="iMile" type="number" step="0.005"></div>
         <div class="field"><label for="iVpt">Deliveries per moved truck (per year)</label><input id="iVpt" type="number" step="1"><small>Default = 355CD annual deliveries ÷ 12 trucks.</small></div>
       </div>
@@ -340,7 +341,7 @@ tr.tot .caret{color:var(--fg)}
       <li><b>Cost rules.</b> 355CD and 355 Reload: fuel + maintenance + depreciation + lease + registration, taxes, Geotab and Lytx. Stores: fuel + flat rate, plus $0.425 per mile for trucks. Trailers, forklifts and TMFLs at stores get only the flat rate plus fuel (propane for forklifts).</li>
       <li><b>Fuel.</b> 12 months of WEX gallons (Oct 2025–Sep 2026; diesel, gasoline and DEF combined) × the 2027 blended monthly rate. Propane: AmeriGas gallons by location for the same months, split evenly across forklifts (033/355/355CD combined total split 3/3/7 by forklift count) × the propane planning price. TMFLs have no separate fuel.</li>
       <li><b>Miles.</b> Geotab miles Oct 2025–Sep 2026; blank months are treated as missing, and the reported-month average × 12 is used. Loaner IDs (e.g. 033-765-694008-flb-LOANER) are matched on the asset number. 626003 uses predecessor 692009. 758005 uses its Jul–Sep run rate. 758011 and 626005 use the 355CD same-type average.</li>
-      <li><b>Maintenance.</b> Vendor invoices Oct 2025–Sep 2026 (2025 and 2026 spend files, all invoice statuses, credits netted), spread evenly across 2027. Registration/inspection work orders ($5,442) are excluded because registration now comes from the fee file.</li>
+      <li><b>Maintenance.</b> Vendor invoices Oct 2025–Sep 2026 (2025 and 2026 spend files, all invoice statuses, credits netted). Each asset's annual amount is spread across 2027 by the monthly pattern of Region 5 maintenance spend, Jan 2025–Sep 2026 (each year normalized, then averaged by calendar month); company-wide or flat timing can be chosen on this tab. Registration/inspection work orders ($5,442) are excluded because registration now comes from the fee file.</li>
       <li><b>Registration, taxes, Geotab and Lytx.</b> Monthly charges per asset from the fee file: registration 0.05% and taxes 0.0667% of original value per month, Geotab $26 and Lytx $36 per truck. Charged to 355CD and 355 Reload only; at stores they are built into the flat rate. The operating-cost view carries them for every asset because the company pays them wherever the asset sits.</li>
       <li><b>Depreciation.</b> Monthly amount from the March 2026 file (components such as wraps and kits summed by asset). New units: 758005/758011 $166,407.25 ÷ 60; 626003/626005 $71,123.99 ÷ 60. The in-service month is month 1; trucks and trailers stop after 60 months, forklifts and TMFLs after 84. Leased assets get no depreciation.</li>
       <li><b>Leases.</b> Fixed monthly rate from the lease file. 747104 ($250) and 747106 ($150) are on holding rentals. 380030, 380042, 380067 and 380068 had no rate, so the batch rate of $447.11 is used. All leases run through Dec 2027.</li>
@@ -374,7 +375,7 @@ const FIXED = ['Maintenance', 'Depreciation', 'Lease', 'Registration & taxes', '
 const N355 = ASSETS.filter(a => a.loc === '355CD' && a.cls === 'Truck').length;
 const SERVED_TOTAL = Object.values(DATA.served).reduce((s, v) => s + v, 0);
 const DEF = () => ({fuelRate: DATA.fuelRate.slice(), lpRate: DATA.lpRate.slice(), mileRate: DATA.mileRate,
-  maintTrend: 0, mileGrowth: 0, vpt: Math.round(SERVED_TOTAL / N355), flat: Object.assign({}, DATA.flat)});
+  maintTrend: 0, maintSeason: 'region', mileGrowth: 0, vpt: Math.round(SERVED_TOTAL / N355), flat: Object.assign({}, DATA.flat)});
 const KEY = 'r5fleet2027.v3';
 // Starting scenario: regional manager's planned changes (10 moved, 5 relocated out), all effective January 2027
 const PRESET = () => ({assign: {'241044': '037', '242012': '041', '243029': '093', '380043': '093', '384041': '355', '697033': '089', '699020': '100', '747083': '033', '749007': '041', '751014': '015',
@@ -446,7 +447,7 @@ function run(assign) {
     const flat = S.p.flat[a.type] || 0;
     for (let i = 0; i < 12; i++) {
       const tf = gal / 12 * S.p.fuelRate[i], ff = lp / 12 * S.p.lpRate[i];
-      const maint = a.maint * mt / 12, dep = a.dep * a.depElig[i], lease = a.lease;
+      const maint = a.maint * mt / 12 * (S.p.maintSeason === 'flat' ? 1 : (DATA.maintSeason[S.p.maintSeason] || DATA.maintSeason.region)[i]), dep = a.dep * a.depElig[i], lease = a.lease;
       op['Truck fuel'][i] = tf; op['Forklift fuel'][i] = ff; op.Maintenance[i] = maint; op.Depreciation[i] = dep; op.Lease[i] = lease; op['Registration & taxes'][i] = a.reg; op['Geotab & Lytx'][i] = a.tel;
       ch['Truck fuel'][i] = tf; ch['Forklift fuel'][i] = ff;
       if (central) { ch.Maintenance[i] = maint; ch.Depreciation[i] = dep; ch.Lease[i] = lease; ch['Registration & taxes'][i] = a.reg; ch['Geotab & Lytx'][i] = a.tel; }
@@ -781,7 +782,7 @@ function renderDetail() {
 function renderAssumptions() {
   const p = S.p;
   const setv = (id, v) => { const e = document.getElementById(id); if (document.activeElement !== e) e.value = v; };
-  setv('iGrowth', p.mileGrowth); setv('iMaint', p.maintTrend); setv('iMile', p.mileRate); setv('iVpt', p.vpt);
+  setv('iGrowth', p.mileGrowth); setv('iSeason', p.maintSeason || 'region'); setv('iMaint', p.maintTrend); setv('iMile', p.mileRate); setv('iVpt', p.vpt);
   const grid = (id, arr, key) => { const g = document.getElementById(id); if (g.childElementCount) { arr.forEach((v, i) => { const e = g.querySelectorAll('input')[i]; if (document.activeElement !== e) e.value = v; }); return; }
     arr.forEach((v, i) => { const lab = el('label', {text: MONTHS[i]}); const inp = el('input', {type: 'number', step: '0.001', id: key + i, value: v}); inp.addEventListener('change', () => { const x = parseFloat(inp.value); if (!isNaN(x) && x >= 0) { S.p[key][i] = x; changed('Rate updated'); } }); lab.append(inp); g.append(lab); }); };
   grid('gFuel', p.fuelRate, 'fuelRate'); grid('gLp', p.lpRate, 'lpRate');
@@ -837,6 +838,7 @@ document.getElementById('btnResetA').addEventListener('click', () => { S.p = DEF
 ['fLoc', 'fCls', 'fMoved'].forEach(id => document.getElementById(id).addEventListener('change', renderAssets));
 document.getElementById('fQ').addEventListener('input', renderAssets);
 document.getElementById('dCat').addEventListener('change', renderDetail);
+document.getElementById('iSeason').addEventListener('change', e => { S.p.maintSeason = e.target.value; changed('Maintenance timing updated'); });
 document.getElementById('expAll').addEventListener('click', () => { S.exp = {ALL: true}; LOCS.forEach(l => S.exp[l.id] = true); save(); renderDetail(); });
 document.getElementById('colAll').addEventListener('click', () => { S.exp = {}; save(); renderDetail(); });
 document.getElementById('aLoc').addEventListener('change', renderDetail);
@@ -944,7 +946,7 @@ function exportExcel() {
   XLSX.utils.book_append_sheet(wb, wsF, 'Forklift utilization');
   // Inputs (re-importable)
   const ip = [['Key', 'Input', 'Value']];
-  ip.push(['mileGrowth', 'Truck mileage change vs last 12 months (%)', S.p.mileGrowth], ['maintTrend', 'Maintenance trend (%)', S.p.maintTrend], ['mileRate', 'Store mileage charge ($/mile)', S.p.mileRate], ['vpt', 'Deliveries per moved truck (per year)', S.p.vpt]);
+  ip.push(['mileGrowth', 'Truck mileage change vs last 12 months (%)', S.p.mileGrowth], ['maintTrend', 'Maintenance trend (%)', S.p.maintTrend], ['maintSeason', 'Maintenance timing (region / company / flat)', S.p.maintSeason || 'region'], ['mileRate', 'Store mileage charge ($/mile)', S.p.mileRate], ['vpt', 'Deliveries per moved truck (per year)', S.p.vpt]);
   MONTHS.forEach((m, i) => ip.push(['fuelRate.' + i, 'Blended fuel rate ' + m + ' 2027 ($/gal)', S.p.fuelRate[i]]));
   MONTHS.forEach((m, i) => ip.push(['lpRate.' + i, 'Propane price ' + m + ' 2027 ($/gal)', S.p.lpRate[i]]));
   Object.keys(S.p.flat).sort().forEach(ty => ip.push(['flat.' + ty, 'Flat rate ' + ty + ' ($/month)', S.p.flat[ty]]));
@@ -974,7 +976,7 @@ function importExcel(file) {
       const volOv = {}; const wv = wb.Sheets['Volume overrides'];
       if (wv) XLSX.utils.sheet_to_json(wv, {defval: ''}).forEach(r => { const s = String(r['Store']).padStart(3, '0'); if (DATA.served[s] !== undefined && r['Override'] !== '' && r['Override'] != null) volOv[s] = +r['Override']; });
       const wi = wb.Sheets['Inputs'];
-      if (wi) { const p = DEF(); XLSX.utils.sheet_to_json(wi, {defval: ''}).forEach(r => { const k = String(r['Key']); const v = parseFloat(r['Value']); if (isNaN(v)) return;
+      if (wi) { const p = DEF(); XLSX.utils.sheet_to_json(wi, {defval: ''}).forEach(r => { const k = String(r['Key']); if (k === 'maintSeason') { const sv = String(r['Value']).trim(); if (['region', 'company', 'flat'].includes(sv)) p.maintSeason = sv; return; } const v = parseFloat(r['Value']); if (isNaN(v)) return;
         if (k.startsWith('fuelRate.')) p.fuelRate[+k.split('.')[1]] = v; else if (k.startsWith('lpRate.')) p.lpRate[+k.split('.')[1]] = v; else if (k.startsWith('flat.')) { const ty = k.slice(5); if (ty in p.flat) p.flat[ty] = v; } else if (k in p) p[k] = v; });
         S.p = p; ['gFuel', 'gLp', 'tFlat'].forEach(id => document.getElementById(id).innerHTML = ''); }
       S.assign = assign; S.eff = eff; S.volOv = volOv;
