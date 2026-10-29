@@ -360,14 +360,15 @@ const N355 = ASSETS.filter(a => a.loc === '355CD' && a.cls === 'Truck').length;
 const SERVED_TOTAL = Object.values(DATA.served).reduce((s, v) => s + v, 0);
 const DEF = () => ({fuelRate: DATA.fuelRate.slice(), lpRate: DATA.lpRate.slice(), mileRate: DATA.mileRate,
   maintTrend: 0, mileGrowth: 0, vpt: Math.round(SERVED_TOTAL / N355), flat: Object.assign({}, DATA.flat)});
-const KEY = 'r5fleet2027.v2';
-const PRESET = () => ({assign: {'749002': 'TERM', '758005': 'TERM', '380041': 'OUT'}, eff: {'758005': 6}});
+const KEY = 'r5fleet2027.v3';
+// Starting scenario: regional manager's planned changes (10 moved, 5 relocated out), all effective January 2027
+const PRESET = () => ({assign: {'241044': '037', '242012': '041', '243029': '093', '380043': '093', '384041': '355', '697033': '089', '699020': '100', '747083': '033', '749007': '041', '751014': '015',
+  '14214': 'OUT', '242013': 'OUT', '382052': 'OUT', '382058': 'OUT', '749002': 'OUT'}, eff: {}});
 let S = {assign: PRESET().assign, volOv: {}, eff: PRESET().eff, p: DEF(), view: 'charge', dcase: 'scen', ufilter: 'all'};
-let OLD = null; try { const r1 = localStorage.getItem('r5fleet2027.v1'); if (r1) { const o1 = JSON.parse(r1); if (o1 && o1.assign && Object.keys(o1.assign).length) OLD = o1; } } catch (e) {}
+let OLD = null; try { for (const kk of ['r5fleet2027.v2', 'r5fleet2027.v1']) { const r1 = localStorage.getItem(kk); if (!r1) continue; const o1 = JSON.parse(r1); if (o1 && o1.assign && Object.keys(o1.assign).length) { OLD = o1; break; } } } catch (e) {}
 function loadState(o) { S = Object.assign(S, o); S.eff = o.eff || {}; S.volOv = o.volOv || {}; S.p = Object.assign(DEF(), o.p || {}); }
 try { const raw = localStorage.getItem(KEY); const o = raw ? JSON.parse(raw) : null;
-  if (OLD && !(o && o.restored)) { loadState(OLD); S.restored = true; localStorage.setItem(KEY, JSON.stringify(S)); }
-  else if (o) loadState(o); } catch (e) {}
+  if (o) loadState(o); } catch (e) {}
 function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
 
 /* ---------- formatting ---------- */
