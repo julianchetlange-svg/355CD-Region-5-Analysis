@@ -265,7 +265,7 @@ tr.tot .caret{color:var(--fg)}
     <div class="panel">
       <div class="phead"><div><h2>How a move changes usage</h2></div></div>
       <ul class="rules">
-        <li><b>Delivery volume follows the truck.</b> Each truck moved from 355CD to a store it serves brings <span id="vptTxt">593</span> deliveries a year (355CD's average per truck), up to the store's total 355CD volume. Set a different number per store below.</li>
+        <li><b>A store that gains a truck makes all its own deliveries.</b> When a store 355CD serves ends up with more trucks than today, from 355CD, another store or 355 Reload, it takes over all of the deliveries 355CD makes for it. Set a different number per store below.</li>
         <li><b>Miles move at the store's miles per delivery.</b> The store gains those miles and 355CD loses the same miles, so region miles stay flat. No mileage savings are claimed.</li>
         <li><b>Work without volume stays put.</b> A truck moved with no volume (store to store, from 355 Reload, or to Laredo, Del Rio or Eagle Pass) leaves its miles with the trucks that remain at the origin. Those miles keep the fuel rate of the truck that left, so a tractor's miles are not costed at pickup fuel economy.</li>
         <li><b>Forklifts carry their propane.</b> TMFLs and trailers have no separate fuel.</li>
@@ -276,7 +276,7 @@ tr.tot .caret{color:var(--fg)}
     </div>
   </div>
   <div class="panel">
-    <div class="phead"><div><h2>Deliveries returned from 355CD</h2><p class="lede">Annualized (Jan–Sep × 12/9). "Auto" uses trucks moved × deliveries per truck. Type a number to override.</p></div></div>
+    <div class="phead"><div><h2>Deliveries returned from 355CD</h2><p class="lede">Annualized (Jan–Sep × 12/9). "Auto" returns all of a store's 355CD deliveries when it gains a truck. Type a number to override.</p></div></div>
     <div class="tbl-wrap"><table id="tVol"></table></div>
   </div>
   <div class="panel">
@@ -337,7 +337,7 @@ tr.tot .caret{color:var(--fg)}
         <div class="field"><label for="iMaint">Maintenance trend vs. last 12 months (%)</label><input id="iMaint" type="number" step="0.5"><small>Store spend fell about 13% year over year; 355CD rose 6%.</small></div>
         <div class="field"><label for="iSeason">Maintenance timing by month</label><select id="iSeason" style="padding:6px 8px;border:1px solid var(--line-strong);border-radius:6px;background:var(--panel);max-width:280px"><option value="region">Region 5 history (Jan 2025–Sep 2026)</option><option value="company">Company-wide history</option><option value="flat">Flat (annual ÷ 12)</option></select><small>Spreads each asset's annual maintenance by the historical monthly pattern. Annual totals do not change.</small></div>
         <div class="field"><label for="iMile">Store mileage charge ($ per mile)</label><input id="iMile" type="number" step="0.005"></div>
-        <div class="field"><label for="iVpt">Deliveries per moved truck (per year)</label><input id="iVpt" type="number" step="1"><small>Default = 355CD annual deliveries ÷ 12 trucks.</small></div>
+        
       </div>
       <div>
         <h3 style="margin-bottom:8px">Blended fuel rate, $/gal</h3>
@@ -419,11 +419,12 @@ function el(tag, attrs, ...kids) { const e = document.createElement(tag); if (at
 
 /* ---------- model ---------- */
 function volumes(assign) {
+  // a store that ends up with more trucks than today takes over all of its 355CD deliveries, wherever the trucks came from
   const moved = {};
-  for (const a of ASSETS) { const to = assign[a.id]; if (a.cls === 'Truck' && a.loc === '355CD' && to && to !== '355CD') moved[to] = (moved[to] || 0) + 1; }
+  for (const a of ASSETS) { if (a.cls !== 'Truck') continue; const to = assign[a.id] || a.loc; if (to !== a.loc) { moved[a.loc] = (moved[a.loc] || 0) - 1; moved[to] = (moved[to] || 0) + 1; } }
   const out = {};
   for (const s in DATA.served) {
-    const auto = Math.min((moved[s] || 0) * S.p.vpt, DATA.served[s]);
+    const auto = (moved[s] || 0) > 0 ? DATA.served[s] : 0;
     const ov = S.volOv[s];
     out[s] = {auto, trucks: moved[s] || 0, v: (ov === undefined || ov === null || ov === '') ? auto : Math.max(0, Math.min(+ov, DATA.served[s])), ov: !(ov === undefined || ov === null || ov === '')};
   }
@@ -447,7 +448,9 @@ function run(assign) {
     const T = Math.max(0, target[l.id]); const rem = T - sb;
     if (rem >= 0) {
       stayed.forEach(a => miles[a.id] = b[a.id]);
-      if (arrived.length) arrived.forEach(a => miles[a.id] = rem / arrived.length);
+      if (arrived.length) { // spread the store's miles over all its trucks; a new truck carries an average share
+        const avgB = stayed.length ? sb / stayed.length : 1; const W = sb + arrived.length * avgB;
+        stayed.forEach(a => miles[a.id] = T * b[a.id] / W); arrived.forEach(a => miles[a.id] = T * avgB / W); }
       else if (sb > 0) {
         stayed.forEach(a => miles[a.id] = b[a.id] * T / sb);
         // miles left behind by departed trucks keep the departed trucks' fuel rate
@@ -673,8 +676,8 @@ function renderMoves() {
   }
 }
 function renderVol() {
-  const t = document.getElementById('tVol'); document.getElementById('vptTxt').textContent = f0.format(S.p.vpt);
-  t.innerHTML = `<thead><tr><th>Store</th><th class="n">355CD deliveries / yr</th><th class="n">Trucks moved in from 355CD</th><th class="n">Auto</th><th class="n">Returned (override)</th><th class="n">Miles shifted</th></tr></thead>`;
+  const t = document.getElementById('tVol');
+  t.innerHTML = `<thead><tr><th>Store</th><th class="n">355CD deliveries / yr</th><th class="n">Trucks gained</th><th class="n">Auto</th><th class="n">Returned (override)</th><th class="n">Miles shifted</th></tr></thead>`;
   const tb = el('tbody');
   for (const s of Object.keys(DATA.served).sort((x, y) => DATA.served[y] - DATA.served[x])) {
     const v = SCEN.vol[s]; const tr = el('tr'); if (v.v > 0) tr.className = 'moved';
@@ -814,7 +817,7 @@ function renderDetail() {
 function renderAssumptions() {
   const p = S.p;
   const setv = (id, v) => { const e = document.getElementById(id); if (document.activeElement !== e) e.value = v; };
-  setv('iGrowth', p.mileGrowth); setv('iSeason', p.maintSeason || 'region'); setv('iMaint', p.maintTrend); setv('iMile', p.mileRate); setv('iVpt', p.vpt);
+  setv('iGrowth', p.mileGrowth); setv('iSeason', p.maintSeason || 'region'); setv('iMaint', p.maintTrend); setv('iMile', p.mileRate); 
   const grid = (id, arr, key) => { const g = document.getElementById(id); if (g.childElementCount) { arr.forEach((v, i) => { const e = g.querySelectorAll('input')[i]; if (document.activeElement !== e) e.value = v; }); return; }
     arr.forEach((v, i) => { const lab = el('label', {text: MONTHS[i]}); const inp = el('input', {type: 'number', step: '0.001', id: key + i, value: v}); inp.addEventListener('change', () => { const x = parseFloat(inp.value); if (!isNaN(x) && x >= 0) { S.p[key][i] = x; changed('Rate updated'); } }); lab.append(inp); g.append(lab); }); };
   grid('gFuel', p.fuelRate, 'fuelRate'); grid('gLp', p.lpRate, 'lpRate');
@@ -866,7 +869,7 @@ document.getElementById('btnPreset').addEventListener('click', () => { const pr 
 document.getElementById('btnReset').addEventListener('click', resetScenario);
 document.getElementById('btnReset2').addEventListener('click', resetScenario);
 document.getElementById('btnResetA').addEventListener('click', () => { S.p = DEF(); document.getElementById('gFuel').innerHTML = ''; document.getElementById('gLp').innerHTML = ''; document.getElementById('tFlat').innerHTML = ''; changed('Default inputs restored'); });
-[['iGrowth', 'mileGrowth'], ['iMaint', 'maintTrend'], ['iMile', 'mileRate'], ['iVpt', 'vpt']].forEach(([id, k]) => document.getElementById(id).addEventListener('change', e => { const x = parseFloat(e.target.value); if (!isNaN(x)) { S.p[k] = k === 'vpt' ? Math.max(0, Math.round(x)) : x; changed('Input updated'); } }));
+[['iGrowth', 'mileGrowth'], ['iMaint', 'maintTrend'], ['iMile', 'mileRate']].forEach(([id, k]) => document.getElementById(id).addEventListener('change', e => { const x = parseFloat(e.target.value); if (!isNaN(x)) { S.p[k] = k === 'vpt' ? Math.max(0, Math.round(x)) : x; changed('Input updated'); } }));
 ['fLoc', 'fCls', 'fMoved'].forEach(id => document.getElementById(id).addEventListener('change', renderAssets));
 document.getElementById('fQ').addEventListener('input', renderAssets);
 document.getElementById('dCat').addEventListener('change', renderDetail);
@@ -942,7 +945,7 @@ function exportExcel() {
   if (!ids.length) ch.push(['No changes in this scenario']);
   XLSX.utils.book_append_sheet(wb, mkSheet(ch, [7, 8, 9, 10, 11, 12, 13, 14], [10, 24, 10, 9, 8, 13, 11, 15, 15, 14, 15, 15, 14, 16, 16, 36]), 'Changes');
   // Volume
-  const vo = [['Store', '355CD deliveries / yr', 'Trucks moved in from 355CD', 'Auto deliveries returned', 'Override', 'Deliveries returned (used)']];
+  const vo = [['Store', '355CD deliveries / yr', 'Trucks gained', 'Auto deliveries returned', 'Override', 'Deliveries returned (used)']];
   Object.keys(DATA.served).forEach(s => { const v = SCEN.vol[s]; vo.push([s, Math.round(DATA.served[s]), v.trucks, Math.round(v.auto), v.ov ? Math.round(v.v) : null, Math.round(v.v)]); });
   XLSX.utils.book_append_sheet(wb, mkSheet(vo, [], [8, 20, 24, 22, 10, 24]), 'Volume overrides');
   // Assets
@@ -980,7 +983,7 @@ function exportExcel() {
   XLSX.utils.book_append_sheet(wb, wsF, 'Forklift utilization');
   // Inputs (re-importable)
   const ip = [['Key', 'Input', 'Value']];
-  ip.push(['mileGrowth', 'Truck mileage change vs last 12 months (%)', S.p.mileGrowth], ['maintTrend', 'Maintenance trend (%)', S.p.maintTrend], ['maintSeason', 'Maintenance timing (region / company / flat)', S.p.maintSeason || 'region'], ['mileRate', 'Store mileage charge ($/mile)', S.p.mileRate], ['vpt', 'Deliveries per moved truck (per year)', S.p.vpt]);
+  ip.push(['mileGrowth', 'Truck mileage change vs last 12 months (%)', S.p.mileGrowth], ['maintTrend', 'Maintenance trend (%)', S.p.maintTrend], ['maintSeason', 'Maintenance timing (region / company / flat)', S.p.maintSeason || 'region'], ['mileRate', 'Store mileage charge ($/mile)', S.p.mileRate]);
   MONTHS.forEach((m, i) => ip.push(['fuelRate.' + i, 'Blended fuel rate ' + m + ' 2027 ($/gal)', S.p.fuelRate[i]]));
   MONTHS.forEach((m, i) => ip.push(['lpRate.' + i, 'Propane price ' + m + ' 2027 ($/gal)', S.p.lpRate[i]]));
   Object.keys(S.p.flat).sort().forEach(ty => ip.push(['flat.' + ty, 'Flat rate ' + ty + ' ($/month)', S.p.flat[ty]]));
