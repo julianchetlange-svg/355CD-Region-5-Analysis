@@ -582,7 +582,7 @@ function renderOverview() {
   k.append(kpi('', 'Store charges', `<span class="${dcls(dch - (scen_ - bcen))}">${sgnK(dch - (scen_ - bcen))}</span>`, `${usdK(bc.total - bcen)} baseline → ${usdK(sc.total - scen_)}`));
   k.append(kpi('', 'Region 5 operating cost change', `<span class="${dcls(dop)}">${sgnK(dop)}</span>`, Math.abs(dop) < 500 ? 'Moves shift charges; real spend is unchanged.' : 'Real change from removals and mileage shifts.'));
   const rem = removalSummary();
-  if (rem.n) k.append(kpi('', 'Company savings from terminations', `<span class="${rem.save > 0.5 ? 'down' : ''}">${usdK(rem.save)}</span>`, `Maintenance, depreciation, lease and fees that stop in 2027. ${rem.nT} terminated, ${rem.nO} relocated out (${usdK(rem.out)} moves to other regions).`));
+  if (rem.n) k.append(kpi('', 'Region 5 savings from removals', `<span class="${rem.save + rem.out > 0.5 ? 'down' : ''}">${usdK(rem.save + rem.out)}</span>`, `Maintenance, depreciation, lease and fees leaving Region 5 in 2027. Terminated (${rem.nT}): ${usdK(rem.save)} company saving. Relocated out (${rem.nO}): ${usdK(rem.out)} moves to the receiving region.`));
   const view = S.view; const B = view === 'op' ? bo : bc, Sx = view === 'op' ? so : sc;
   document.getElementById('monthLede').textContent = `${view === 'op' ? 'Company operating cost' : 'Location charges'}: baseline ${usd(B.total)}, scenario ${usd(Sx.total)}. Fuel falls through the year as the 2027 rate drops from $${S.p.fuelRate[0].toFixed(2)} to $${S.p.fuelRate[11].toFixed(2)}.`;
   drawMonthly(document.getElementById('chMonth'), B.byM, Sx.byM);
@@ -895,7 +895,7 @@ function exportExcel() {
     ['   355CD + 355 Reload', r2(totals(BASE, 'charge', cen).total), r2(totals(SCEN, 'charge', cen).total), r2(totals(SCEN, 'charge', cen).total - totals(BASE, 'charge', cen).total)],
     ['   Stores', r2(totals(BASE, 'charge', sto).total), r2(totals(SCEN, 'charge', sto).total), r2(totals(SCEN, 'charge', sto).total - totals(BASE, 'charge', sto).total)],
     ['Region 5 operating cost', r2(bo.total), r2(so.total), r2(so.total - bo.total)],
-    ['Company savings from terminations', null, r2(rem.save), null], ['Cost relocated to other regions', null, r2(rem.out), null], [],
+    ['Region 5 savings from removals', null, r2(rem.save + rem.out), null], ['   Terminated (company saving)', null, r2(rem.save), null], ['   Relocated out (moves to receiving region)', null, r2(rem.out), null], [],
     ['Location', 'Rules', 'Assets (baseline)', 'Assets (scenario)', 'Baseline charges', 'Scenario charges', 'Charges change', 'Baseline operating', 'Scenario operating', 'Operating change']];
   for (const l of LOCS) { const f = p => p.loc === l.id; const b = totals(BASE, 'charge', f).total, s = totals(SCEN, 'charge', f).total, ob = totals(BASE, 'op', f).total, os = totals(SCEN, 'op', f).total;
     sm.push([locLabel(l.id), l.kind, BASE.rows.filter(r => r.loc === l.id).length, SCEN.rows.filter(r => r.loc === l.id).length, r2(b), r2(s), r2(s - b), r2(ob), r2(os), r2(os - ob)]); }
