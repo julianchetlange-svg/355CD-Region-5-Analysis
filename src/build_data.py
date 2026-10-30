@@ -35,7 +35,7 @@ lease = pd.to_numeric(ls['Asset Lease Fixed Rate'], errors='coerce')
 lease = dict(zip(ls['Asset Name'], lease))
 lease_note = {}
 for k in ['380030', '380042', '380067', '380068']:
-    lease[k] = 447.11; lease_note[k] = 'Rate missing; batch rate $447.11 used'
+    lease[k] = 316.03  # rate provided Oct 30, 2026
 lease['747104'] = 250.0; lease_note['747104'] = 'Holding rental $250/mo'
 lease['747106'] = 150.0; lease_note['747106'] = 'Holding rental $150/mo'
 
