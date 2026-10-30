@@ -11,7 +11,7 @@
   --fg:#10261D; --muted:#4E6358; --faint:#7A8C81;
   --accent:#0D5540; --accent-soft:#DCEBE1; --hl:#FFF6A8; --hl-ink:#3D3300;
   --s-base:#1E8A5E; --s-scen:#C08A00;
-  --up:#A33A16; --down:#16794A; --warn:#8A6100; --warn-bg:#FFF3C4;
+  --up:#A33A16; --down:#16794A; --warn:#8A6100; --warn-bg:#FFF3C4; --bad:#A3201C; --bad-bg:#FCE3DE;
   --font-display:"Zilla Slab", Rockwell, "Roboto Slab", Georgia, serif;
   --font-body:"Public Sans", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
@@ -21,13 +21,13 @@
   --fg:#E8F1EB; --muted:#A9C2B4; --faint:#7E9B8C;
   --accent:#7FD3A8; --accent-soft:#1B4D3B; --hl:#4A4310; --hl-ink:#FFF2A0;
   --s-base:#2F8C66; --s-scen:#B08A0C;
-  --up:#FF9B73; --down:#6FD9A0; --warn:#F2C94C; --warn-bg:#3A3410; color-scheme:dark}}
+  --up:#FF9B73; --down:#6FD9A0; --warn:#F2C94C; --warn-bg:#3A3410; --bad:#FFB4A8; --bad-bg:#4A1A14; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0B2219; --panel:#123B2E; --panel-2:#174535; --line:#255C48; --line-strong:#3A7560;
   --fg:#E8F1EB; --muted:#A9C2B4; --faint:#7E9B8C;
   --accent:#7FD3A8; --accent-soft:#1B4D3B; --hl:#4A4310; --hl-ink:#FFF2A0;
   --s-base:#2F8C66; --s-scen:#B08A0C;
-  --up:#FF9B73; --down:#6FD9A0; --warn:#F2C94C; --warn-bg:#3A3410; color-scheme:dark}
+  --up:#FF9B73; --down:#6FD9A0; --warn:#F2C94C; --warn-bg:#3A3410; --bad:#FFB4A8; --bad-bg:#4A1A14; color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:14px;line-height:1.45;margin:0}
@@ -181,6 +181,10 @@ td select{padding:4px 6px;border:1px solid var(--line-strong);border-radius:6px;
 tr.subrow td{font-size:12.5px;color:var(--muted);background:var(--panel)}
 tr.subrow td:first-child{padding-left:40px}
 tr.tot .caret{color:var(--fg)}
+.mflag{display:block;margin-top:5px;padding:5px 9px;border-radius:6px;font-size:12px;font-weight:600;white-space:normal;line-height:1.35}
+.mflag.red{background:var(--bad-bg);color:var(--bad);border:1px solid var(--bad)}
+.mflag.amber{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn)}
+.chip.red{background:var(--bad-bg);color:var(--bad);border:1px solid var(--bad)}
 .toast{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:13px;z-index:60}
 @media (prefers-reduced-motion: no-preference){.ucard,.kpi{transition:border-color .2s}}
 </style>
@@ -258,6 +262,7 @@ tr.tot .caret{color:var(--fg)}
         <li><b>Work without volume stays put.</b> A truck moved with no volume (store to store, from 355 Reload, or to Laredo, Del Rio or Eagle Pass) leaves its miles with the trucks that remain at the origin. Those miles keep the fuel rate of the truck that left, so a tractor's miles are not costed at pickup fuel economy.</li>
         <li><b>Forklifts carry their propane.</b> TMFLs and trailers have no separate fuel.</li>
         <li><b>Terminate or relocate out.</b> The asset's costs leave Region 5 from its effective month. Its work stays: miles and fuel pass to the remaining trucks at that location, propane to the remaining forklifts. Terminating saves the company its maintenance, depreciation and lease; relocating out moves those costs to another region.</li>
+        <li><b>Caution flags.</b> A move to a store that takes no 355CD deliveries is flagged. It is flagged red (no benefit) when that store is also below 35% time-away utilization and 45% weight utilization, and amber otherwise.</li>
         <li><b>Effective month.</b> Every change starts in the month you pick (default January). Utilization shows the full-year rate after all changes.</li>
       </ul>
     </div>
@@ -617,6 +622,14 @@ function removalSummary() {
     region += assetTotal(rb, 'op') - assetTotal(rs, 'op'); if (d === 'TERM') { nT++; save += fixed; } else { nO++; out += fixed; } }
   return {n, nT, nO, save, region, out};
 }
+const FLAG_TA = 0.35, FLAG_WT = 0.45;
+function moveFlag(dest) {
+  if (!dest || REM.has(dest) || !LOC[dest] || isCentral(dest)) return null;
+  const m = DATA.metrics[dest]; if (!m || (DATA.served[dest] || 0) > 0) return null;
+  const low = m.timeAway < FLAG_TA && m.weight < FLAG_WT;
+  return low ? {lvl: 'red', short: 'No benefit', text: `Caution: no benefit to moving this asset. ${dest} ${LOC[dest].name} takes no deliveries from 355CD and is below 35% time-away utilization (${pct(m.timeAway)}) and 45% weight utilization (${pct(m.weight)}).`}
+    : {lvl: 'amber', short: 'No 355CD volume', text: `${dest} ${LOC[dest].name} takes no deliveries from 355CD, so this move adds cost without new work (time away ${pct(m.timeAway)}, weight ${pct(m.weight)}).`};
+}
 function remainingBook(a, eff) { if (a.own !== 'Owned' || !a.dep) return 0; const d = new Date(a.isd + 'T00:00:00'); const k = (2027 - d.getFullYear()) * 12 + (eff + 1 - (d.getMonth() + 1)) + 1; return Math.max(0, a.term - k + 1) * a.dep; }
 function renderMoves() {
   const box = document.getElementById('movesList'); box.innerHTML = '';
@@ -639,7 +652,8 @@ function renderMoves() {
       sp.innerHTML = `<b>${esc(id)}</b> ${esc(a.type)} · ${esc(a.loc)} → <b>${dest === 'TERM' ? 'Terminate' : 'Relocate out'}</b><br>${detail}`;
     } else {
       const d = assetTotal(rs, 'charge') - assetTotal(rb, 'charge');
-      sp.innerHTML = `<b>${esc(id)}</b> ${esc(a.type)} · ${esc(a.loc)} → <b>${esc(dest)}</b> <span class="num">(${sgn(d)} on this asset)</span>`;
+      const fg = moveFlag(dest);
+      sp.innerHTML = `<b>${esc(id)}</b> ${esc(a.type)} · ${esc(a.loc)} → <b>${esc(dest)}</b> <span class="num">(${sgn(d)} on this asset)</span>${fg ? `<span class="mflag ${fg.lvl}">${esc(fg.text)}</span>` : ''}`;
     }
     const ms = el('select', {id: 'eff-' + id, 'aria-label': 'Effective month for ' + id}); MONTHS.forEach((mn, i) => ms.append(el('option', {value: i, text: 'From ' + mn})));
     ms.value = eff; ms.style.cssText = 'padding:3px 6px;border:1px solid var(--line-strong);border-radius:6px;background:var(--panel);color:var(--fg)';
@@ -676,7 +690,7 @@ function renderAssets() {
     cnt++;
     const b = assetTotal(rb, 'charge'), s = assetTotal(rs, 'charge'), d = s - b;
     const tr = el('tr'); if (moved) tr.className = 'moved';
-    tr.innerHTML = `<td><b>${esc(a.id)}</b><span class="sub2">${esc(a.type)}</span></td><td>${a.cls}</td><td>${a.own}</td><td>${esc(a.loc)}</td><td class="sel"></td><td class="n">${a.cls === 'Truck' ? f0.format(rs.miles) + (moved || Math.abs(rs.miles - rb.miles) > 1 ? `<span class="sub2">base ${f0.format(rb.miles)}</span>` : '') : '–'}</td><td class="n">${usd(b)}</td><td class="n">${usd(s)}</td><td class="n ${dcls(d)}">${sgn(d)}</td><td>${a.flags.length ? `<span class="chip w" title="${esc(a.flags.join('; '))}">${a.flags.length} note${a.flags.length > 1 ? 's' : ''}</span>` : ''}</td>`;
+    tr.innerHTML = `<td><b>${esc(a.id)}</b><span class="sub2">${esc(a.type)}</span></td><td>${a.cls}</td><td>${a.own}</td><td>${esc(a.loc)}</td><td class="sel"></td><td class="n">${a.cls === 'Truck' ? f0.format(rs.miles) + (moved || Math.abs(rs.miles - rb.miles) > 1 ? `<span class="sub2">base ${f0.format(rb.miles)}</span>` : '') : '–'}</td><td class="n">${usd(b)}</td><td class="n">${usd(s)}</td><td class="n ${dcls(d)}">${sgn(d)}</td><td>${(() => { const fg = moved ? moveFlag(rs.loc) : null; return fg ? `<span class="chip ${fg.lvl === 'red' ? 'red' : 'w'}" title="${esc(fg.text)}">${fg.short}</span> ` : ''; })()}${a.flags.length ? `<span class="chip w" title="${esc(a.flags.join('; '))}">${a.flags.length} note${a.flags.length > 1 ? 's' : ''}</span>` : ''}</td>`;
     const sel = el('select', {id: 'as-' + a.id, 'aria-label': 'Assign ' + a.id + ' to'});
     LOCS.forEach(l => sel.append(el('option', {value: l.id, text: l.id === a.loc ? l.id + ' (current)' : locLabel(l.id)})));
     ['TERM', 'OUT'].forEach(v => sel.append(el('option', {value: v, text: v === 'TERM' ? 'Terminate (sell / return lease)' : 'Relocate out of Region 5'})));
@@ -913,7 +927,7 @@ function exportExcel() {
     const fixed = FIXED.reduce((s, c) => s + sum12(rb.op[c]) - sum12(rs.op[c]), 0);
     const b = assetTotal(rb, 'charge'), s = assetTotal(rs, 'charge'), ob = assetTotal(rb, 'op'), os = assetTotal(rs, 'op');
     ch.push([id, a.type, a.cls, a.own, a.loc, destName(d), MONTHS[eff], r2(b), r2(s), r2(s - b), r2(ob), r2(os), r2(os - ob), d === 'TERM' ? r2(fixed) : null, d === 'TERM' ? r2(remainingBook(a, eff)) : null,
-      d === 'OUT' ? 'Cost continues in receiving region' : d === 'TERM' ? 'Work passes to remaining units at ' + a.loc : '']); }
+      d === 'OUT' ? 'Cost continues in receiving region' : d === 'TERM' ? 'Work passes to remaining units at ' + a.loc : (moveFlag(d) ? moveFlag(d).text : '')]); }
   if (!ids.length) ch.push(['No changes in this scenario']);
   XLSX.utils.book_append_sheet(wb, mkSheet(ch, [7, 8, 9, 10, 11, 12, 13, 14], [10, 24, 10, 9, 8, 13, 11, 15, 15, 14, 15, 15, 14, 16, 16, 36]), 'Changes');
   // Volume
