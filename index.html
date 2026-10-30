@@ -192,6 +192,13 @@ tr.tot .caret{color:var(--fg)}
 .kpis.compact .kpi .d{font-size:11.5px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .kpis.compact .eyebrow{font-size:10px}
 @media (max-width:700px){.kstick{position:static}}
+.xbtn{position:relative}
+.xbtn.needs-export{box-shadow:0 0 0 3px rgba(255,233,1,.55),0 0 14px 4px rgba(255,233,1,.55);border-color:#C9A800}
+.xbtn.needs-export::after{content:"";position:absolute;top:-4px;right:-4px;width:10px;height:10px;border-radius:50%;background:#D93A1E;border:2px solid #fff}
+@media (prefers-reduced-motion: no-preference){
+  .xbtn.needs-export{animation:xglow 1.6s ease-in-out infinite}
+  @keyframes xglow{0%,100%{box-shadow:0 0 0 2px rgba(255,233,1,.45),0 0 6px 1px rgba(255,233,1,.35);transform:scale(1)}50%{box-shadow:0 0 0 4px rgba(255,233,1,.75),0 0 20px 6px rgba(255,233,1,.65);transform:scale(1.04)}}
+}
 .toast{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:13px;z-index:60}
 @media (prefers-reduced-motion: no-preference){.ucard,.kpi{transition:border-color .2s}}
 </style>
@@ -205,7 +212,7 @@ tr.tot .caret{color:var(--fg)}
     </div>
     <div class="tools">
       <span class="pill base" id="hdrStatus">Baseline only</span>
-      <button class="btn sun small" id="btnExport" type="button">Export to Excel</button>
+      <button class="btn sun small xbtn" id="btnExport" type="button">Export to Excel</button>
       <button class="btn ghost small" id="btnReset" type="button">Reset scenario</button>
     </div>
   </div>
@@ -258,7 +265,7 @@ tr.tot .caret{color:var(--fg)}
   <div class="grid2">
     <div class="panel">
       <div class="phead"><div><h2>Moves in this scenario</h2><p class="lede">Pick a new location for any asset in the table below. Costs, mileage and utilization update immediately using the destination's rules. Changes are kept in this browser only; use Export to Excel to save a copy and Import scenario to load one back.</p></div>
-        <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small sun" id="btnExport2" type="button">Export to Excel</button><button class="btn small" id="btnImport" type="button">Import scenario</button><input type="file" id="fileImport" accept=".xlsx,.xls" hidden><button class="btn small" id="btnCopyScen" type="button">Copy scenario</button><button class="btn small" id="btnOld" type="button" hidden>Restore my earlier moves</button><button class="btn small" id="btnPreset" type="button">Load starting scenario</button><button class="btn small" id="btnReset2" type="button">Reset scenario</button></span></div>
+        <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small sun xbtn" id="btnExport2" type="button">Export to Excel</button><button class="btn small" id="btnImport" type="button">Import scenario</button><input type="file" id="fileImport" accept=".xlsx,.xls" hidden><button class="btn small" id="btnCopyScen" type="button">Copy scenario</button><button class="btn small" id="btnOld" type="button" hidden>Restore my earlier moves</button><button class="btn small" id="btnPreset" type="button">Load starting scenario</button><button class="btn small" id="btnReset2" type="button">Reset scenario</button></span></div>
       <textarea id="scenText" hidden readonly rows="6" style="width:100%;margin-bottom:10px;font-family:var(--font-mono);font-size:12px;border:1px solid var(--line-strong);border-radius:6px;background:var(--panel);color:var(--fg);padding:8px" aria-label="Scenario as text"></textarea>
       <div class="moves" id="movesList"></div>
     </div>
@@ -844,12 +851,13 @@ function renderXbars() {
   const txt = isDirty() ? 'Changes not yet exported' + (S.lastExport ? ' (last export ' + new Date(S.lastExport).toLocaleString([], {month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'}) + ')' : '')
     : S.lastExport ? 'All changes exported ' + new Date(S.lastExport).toLocaleString([], {month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'}) : 'No changes since the page opened';
   document.querySelectorAll('.xbar .st').forEach(e => { e.textContent = txt; e.classList.toggle('dirty', isDirty()); });
+  document.querySelectorAll('.xbtn').forEach(b => b.classList.toggle('needs-export', isDirty()));
 }
 document.querySelectorAll('section.view').forEach(sec => {
   const bar = el('div', {class: 'xbar', role: 'note'});
   const msg = el('span'); msg.innerHTML = '<b>Please export your changes before closing.</b> Changes are kept only in this browser. Export to Excel saves a copy you can import later.';
   const right = el('span', {style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap'});
-  const st = el('span', {class: 'st'}); const bt = el('button', {class: 'btn sun small', type: 'button', text: 'Export progress to Excel'});
+  const st = el('span', {class: 'st'}); const bt = el('button', {class: 'btn sun small xbtn', type: 'button', text: 'Export progress to Excel'});
   bt.addEventListener('click', () => exportExcel());
   right.append(st, bt); bar.append(msg, right); sec.prepend(bar);
 });
