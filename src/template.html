@@ -289,7 +289,7 @@ tr.tot .caret{color:var(--fg)}
   <div class="panel">
     <div class="phead"><div><h2>Assets</h2><p class="lede">Annual 2027 location charges. Highlighted rows are moved.</p></div></div>
     <div class="filters">
-      <label>Current location<select id="fLoc"></select></label>
+      <label>Location (today or after moves)<select id="fLoc"></select></label>
       <label>Asset class<select id="fCls"><option value="">All</option><option>Truck</option><option>Trailer</option><option>Forklift</option><option>TMFL</option></select></label>
       <label>Search<input type="search" id="fQ" placeholder="Asset # or type"></label>
       <label>Show<select id="fMoved"><option value="">All assets</option><option value="1">Moved only</option></select></label>
@@ -706,12 +706,14 @@ function renderAssets() {
   const tb = el('tbody'); let cnt = 0;
   SCEN.rows.forEach((rs, i) => {
     const a = rs.a, rb = BASE.rows[i]; const moved = (S.assign[a.id] || a.loc) !== a.loc;
-    if (fl && a.loc !== fl) return; if (fc && a.cls !== fc) return; if (fm && !moved) return;
+    const dest = S.assign[a.id] || a.loc;
+    if (fl && a.loc !== fl && dest !== fl) return; if (fc && a.cls !== fc) return; if (fm && !moved) return;
+    const io = !fl || !moved ? '' : dest === fl ? `<span class="chip m" style="margin-left:6px">Moving in from ${esc(a.loc)}</span>` : `<span class="chip s" style="margin-left:6px">Moving out</span>`;
     if (q && !(a.id.toLowerCase().includes(q) || a.type.toLowerCase().includes(q))) return;
     cnt++;
     const b = assetTotal(rb, 'charge'), s = assetTotal(rs, 'charge'), d = s - b;
     const tr = el('tr'); if (moved) tr.className = 'moved';
-    tr.innerHTML = `<td><b>${esc(a.id)}</b><span class="sub2">${esc(a.type)}</span></td><td>${a.cls}</td><td>${a.own}</td><td>${esc(a.loc)}</td><td class="sel"></td><td class="n">${a.cls === 'Truck' ? f0.format(rs.miles) + (moved || Math.abs(rs.miles - rb.miles) > 1 ? `<span class="sub2">base ${f0.format(rb.miles)}</span>` : '') : '–'}</td><td class="n">${usd(b)}</td><td class="n">${usd(s)}</td><td class="n ${dcls(d)}">${sgn(d)}</td><td>${(() => { const fg = moved ? moveFlag(rs.loc) : null; return fg ? `<span class="chip ${fg.lvl === 'red' ? 'red' : 'w'}" title="${esc(fg.text)}">${fg.short}</span> ` : ''; })()}${a.flags.length ? `<span class="chip w" title="${esc(a.flags.join('; '))}">${a.flags.length} note${a.flags.length > 1 ? 's' : ''}</span>` : ''}</td>`;
+    tr.innerHTML = `<td><b>${esc(a.id)}</b><span class="sub2">${esc(a.type)}</span></td><td>${a.cls}</td><td>${a.own}</td><td>${esc(a.loc)}${io}</td><td class="sel"></td><td class="n">${a.cls === 'Truck' ? f0.format(rs.miles) + (moved || Math.abs(rs.miles - rb.miles) > 1 ? `<span class="sub2">base ${f0.format(rb.miles)}</span>` : '') : '–'}</td><td class="n">${usd(b)}</td><td class="n">${usd(s)}</td><td class="n ${dcls(d)}">${sgn(d)}</td><td>${(() => { const fg = moved ? moveFlag(rs.loc) : null; return fg ? `<span class="chip ${fg.lvl === 'red' ? 'red' : 'w'}" title="${esc(fg.text)}">${fg.short}</span> ` : ''; })()}${a.flags.length ? `<span class="chip w" title="${esc(a.flags.join('; '))}">${a.flags.length} note${a.flags.length > 1 ? 's' : ''}</span>` : ''}</td>`;
     const sel = el('select', {id: 'as-' + a.id, 'aria-label': 'Assign ' + a.id + ' to'});
     LOCS.forEach(l => sel.append(el('option', {value: l.id, text: l.id === a.loc ? l.id + ' (current)' : locLabel(l.id)})));
     ['TERM', 'OUT'].forEach(v => sel.append(el('option', {value: v, text: v === 'TERM' ? 'Terminate (sell / return lease)' : 'Relocate out of Region 5'})));
