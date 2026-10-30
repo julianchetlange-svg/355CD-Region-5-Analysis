@@ -255,7 +255,7 @@ tr.tot .caret{color:var(--fg)}
       <ul class="rules">
         <li><b>Delivery volume follows the truck.</b> Each truck moved from 355CD to a store it serves brings <span id="vptTxt">593</span> deliveries a year (355CD's average per truck), up to the store's total 355CD volume. Set a different number per store below.</li>
         <li><b>Miles move at the store's miles per delivery.</b> The store gains those miles and 355CD loses the same miles, so region miles stay flat. No mileage savings are claimed.</li>
-        <li><b>Work without volume stays put.</b> A truck moved with no volume (store to store, from 355 Reload, or to Laredo, Del Rio or Eagle Pass) leaves its miles with the trucks that remain at the origin.</li>
+        <li><b>Work without volume stays put.</b> A truck moved with no volume (store to store, from 355 Reload, or to Laredo, Del Rio or Eagle Pass) leaves its miles with the trucks that remain at the origin. Those miles keep the fuel rate of the truck that left, so a tractor's miles are not costed at pickup fuel economy.</li>
         <li><b>Forklifts carry their propane.</b> TMFLs and trailers have no separate fuel.</li>
         <li><b>Terminate or relocate out.</b> The asset's costs leave Region 5 from its effective month. Its work stays: miles and fuel pass to the remaining trucks at that location, propane to the remaining forklifts. Terminating saves the company its maintenance, depreciation and lease; relocating out moves those costs to another region.</li>
         <li><b>Effective month.</b> Every change starts in the month you pick (default January). Utilization shows the full-year rate after all changes.</li>
@@ -426,7 +426,7 @@ function run(assign) {
   let volMiles = 0;
   for (const s in vol) { const m = vol[s].v * DATA.metrics[s].mpd * g; target[s] += m; volMiles += m; }
   target['355CD'] -= volMiles;
-  const miles = {}; const unalloc = {};
+  const miles = {}; const unalloc = {}; const absorbGpm = {};
   for (const l of LOCS) {
     const present = ASSETS.filter(a => a.cls === 'Truck' && locOf(a) === l.id);
     const stayed = present.filter(a => a.loc === l.id), arrived = present.filter(a => a.loc !== l.id);
@@ -435,7 +435,12 @@ function run(assign) {
     if (rem >= 0) {
       stayed.forEach(a => miles[a.id] = b[a.id]);
       if (arrived.length) arrived.forEach(a => miles[a.id] = rem / arrived.length);
-      else if (sb > 0) stayed.forEach(a => miles[a.id] = b[a.id] * T / sb);
+      else if (sb > 0) {
+        stayed.forEach(a => miles[a.id] = b[a.id] * T / sb);
+        // miles left behind by departed trucks keep the departed trucks' fuel rate
+        const dep = ASSETS.filter(a => a.cls === 'Truck' && a.loc === l.id && locOf(a) !== l.id), dm = dep.reduce((s, a) => s + b[a.id], 0);
+        if (dm > 0) { const gOut = dep.reduce((s, a) => s + b[a.id] * a.gpm, 0) / dm; stayed.forEach(a => absorbGpm[a.id] = gOut); }
+      }
       else if (rem > 1) unalloc[l.id] = rem;
     } else { stayed.forEach(a => miles[a.id] = sb > 0 ? b[a.id] * T / sb : 0); arrived.forEach(a => miles[a.id] = 0); }
   }
@@ -446,7 +451,7 @@ function run(assign) {
     if (REM.has(loc)) { const ch = {}, op = {}; CATS_CH.forEach(c => ch[c] = new Array(12).fill(0)); CATS_OP.forEach(c => op[c] = new Array(12).fill(0)); return {a, loc, miles: 0, gal: 0, lp: 0, ch, op, parts: [{loc, ch, op}]}; }
     const ch = {}, op = {}; CATS_CH.forEach(c => ch[c] = new Array(12).fill(0)); CATS_OP.forEach(c => op[c] = new Array(12).fill(0));
     let m = 0, gal = 0;
-    if (a.cls === 'Truck') { m = miles[a.id] || 0; gal = Math.max(0, a.gal * g + (m - a.miles * g) * a.gpm); }
+    if (a.cls === 'Truck') { m = miles[a.id] || 0; const extra = m - a.miles * g; gal = Math.max(0, a.gal * g + extra * (extra > 0 && absorbGpm[a.id] != null ? absorbGpm[a.id] : a.gpm)); }
     const lp = a.cls === 'Forklift' ? a.lp + (lpPool[loc] && fkAt[loc] ? lpPool[loc] / fkAt[loc] : 0) : 0;
     const flat = S.p.flat[a.type] || 0;
     for (let i = 0; i < 12; i++) {
@@ -580,8 +585,8 @@ function renderOverview() {
   k.append(kpi('', 'Scenario · location charges', usdK(sc.total), `<span class="${dcls(dch)}">${sgnK(dch)}</span> vs. baseline (${bc.total ? (dch / bc.total * 100).toFixed(1) : 0}%)`));
   k.append(kpi('', 'Central (355CD + 355) charges', `<span class="${dcls(scen_ - bcen)}">${sgnK(scen_ - bcen)}</span>`, `${usdK(bcen)} baseline → ${usdK(scen_)}`));
   k.append(kpi('', 'Store charges', `<span class="${dcls(dch - (scen_ - bcen))}">${sgnK(dch - (scen_ - bcen))}</span>`, `${usdK(bc.total - bcen)} baseline → ${usdK(sc.total - scen_)}`));
-  k.append(kpi('', 'Region 5 operating cost change', `<span class="${dcls(dop)}">${sgnK(dop)}</span>`, Math.abs(dop) < 500 ? 'Moves shift charges; real spend is unchanged.' : 'Real change from removals and mileage shifts.'));
-  const rem = removalSummary();
+  const rem = removalSummary(); const remAmt = rem.save + rem.out;
+  k.append(kpi('', 'Region 5 operating cost change', `<span class="${dcls(dop)}">${sgnK(dop)}</span>`, Math.abs(dop) < 500 ? 'Moves shift charges; real spend is unchanged.' : `Removals ${sgnK(-remAmt)}; fuel and other shifts ${sgnK(dop + remAmt)}.`));
   if (rem.n) k.append(kpi('', 'Region 5 savings from removals', `<span class="${rem.save + rem.out > 0.5 ? 'down' : ''}">${usdK(rem.save + rem.out)}</span>`, `Maintenance, depreciation, lease and fees leaving Region 5 in 2027. Terminated (${rem.nT}): ${usdK(rem.save)} company saving. Relocated out (${rem.nO}): ${usdK(rem.out)} moves to the receiving region.`));
   const view = S.view; const B = view === 'op' ? bo : bc, Sx = view === 'op' ? so : sc;
   document.getElementById('monthLede').textContent = `${view === 'op' ? 'Company operating cost' : 'Location charges'}: baseline ${usd(B.total)}, scenario ${usd(Sx.total)}. Fuel falls through the year as the 2027 rate drops from $${S.p.fuelRate[0].toFixed(2)} to $${S.p.fuelRate[11].toFixed(2)}.`;
